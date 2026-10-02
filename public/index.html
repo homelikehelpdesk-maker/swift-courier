@@ -177,8 +177,8 @@ async function ordersView(){show('<div class="wrap"><h2>My orders</h2><div id="o
     $$('[data-c]').forEach(b=>b.onclick=run(async()=>{if(confirm('Cancel this order?')){await api(`orders/${b.dataset.c}/cancel`,'POST');toast('Order cancelled');ordersView()}}))})()}
 
 function trackView(id){show(`<div class="wrap"><h2>Track your parcel</h2><div class="card row"><div><label>Tracking ID</label><input id="tid" value="${esc(id||'')}" placeholder="e.g. SR1A2B3C4D"></div><button id="tg" style="flex:0 0 auto">Track</button></div><div id="tr"></div></div>`);
-  const t=()=>go('#/track/'+encodeURIComponent($('#tid').value.trim()));$('#tg').onclick=t;$('#tid').onkeydown=e=>e.key==='Enter'&&t();
-  if(id)run(async()=>{const d=await api('track/'+encodeURIComponent(id));
+  const t=()=>{const v=$('#tid').value.trim();if(!v)return toast('Type a tracking ID first',1);go('#/track/'+encodeURIComponent(v))};$('#tg').onclick=t;$('#tid').onkeydown=e=>{if(e.key==='Enter')t()};
+  if(id)run(async()=>{let d;try{d=await api('track/'+encodeURIComponent(id))}catch(e){return $('#tr').innerHTML=`<div class="card"><b>Parcel not found</b><div class="mute">${esc(e.message)}. Check the ID for typos. Orders made before the database change no longer exist. You can copy a current ID from My orders.</div></div>`}
     $('#tr').innerHTML=`<div class="card"><b>${esc(d.tracking)}</b> <span class="pill ${esc(d.status)}">${esc(d.status)}</span><div class="mute">${esc(d.a)} to ${esc(d.b)}, ${esc(d.parcel||'Parcel')}, ${d.service}</div>
      <ol class="tl">${d.events.slice().reverse().map(e=>`<li><b>${esc(e.status)}</b><span class="mute">${fmt(e.at)}</span></li>`).join('')}</ol></div>`})()}
 
