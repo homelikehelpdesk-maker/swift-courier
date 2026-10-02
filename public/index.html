@@ -2,116 +2,232 @@
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Courier</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap">
 <style>
-:root{--ink:#0f1b2d;--acc:#ff6b2c;--bg:#f4f6fa;--card:#fff;--mute:#6b778c;--line:#e2e7ef;--ok:#1f9d63;--bad:#d64545}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-header{background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:14px 20px;position:sticky;top:0;z-index:5}
-header b{font-size:1.15rem;letter-spacing:.2px}header b i{color:var(--acc);font-style:normal}
-main{max-width:980px;margin:0 auto;padding:22px 16px 60px}
+:root{--ink:#0f1b2d;--acc:#ff6b2c;--bg:#f4f6fa;--card:#fff;--mute:#66738a;--line:#e2e7ef;--ok:#1f9d63;--bad:#d64545}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:500 16px/1.55 "Plus Jakarta Sans",system-ui,sans-serif}
+a{color:inherit}h2{margin:0 0 14px;font-size:1.5rem;font-weight:800}
+header{background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 20px;position:sticky;top:0;z-index:5}
+header .logo{font-weight:800;font-size:1.2rem;cursor:pointer}header .logo i{color:var(--acc);font-style:normal}
+nav{display:flex;gap:6px;align-items:center;flex-wrap:wrap}nav a{padding:8px 12px;border-radius:8px;text-decoration:none;color:#c9d4e6;font-weight:700;font-size:.92rem}nav a:hover{background:#1c2f4d;color:#fff}
+.wrap{max-width:1040px;margin:0 auto;padding:28px 16px}
 .view{animation:in .35s ease}@keyframes in{from{opacity:0;transform:translateY(8px)}}
-.card{background:var(--card);border-radius:14px;padding:20px;margin-bottom:18px;box-shadow:0 1px 3px rgba(15,27,45,.08)}
-h2{margin:0 0 14px;font-size:1.25rem}
-label{display:block;font-size:.85rem;color:var(--mute);margin:10px 0 4px}
-input,select,textarea{width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:10px;font:inherit;background:#fff;transition:border .15s,box-shadow .15s}
+.card{background:var(--card);border-radius:16px;padding:20px;margin-bottom:18px;box-shadow:0 1px 3px rgba(15,27,45,.08)}
+label{display:block;font-size:.85rem;color:var(--mute);margin:10px 0 4px;font-weight:700}
+input,select,textarea{width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:10px;font:inherit;background:#fff;color:var(--ink);transition:border .15s,box-shadow .15s}
+input[type=checkbox],input[type=radio]{width:auto}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px rgba(255,107,44,.18)}
-button{font:inherit;font-weight:600;border:0;border-radius:10px;padding:11px 18px;cursor:pointer;background:var(--acc);color:#fff;transition:transform .1s,opacity .15s}
+button{font:inherit;font-weight:700;border:0;border-radius:10px;padding:11px 20px;cursor:pointer;background:var(--acc);color:#fff;transition:transform .1s,opacity .15s}
 button:hover{opacity:.9}button:active{transform:scale(.97)}
 button.ghost{background:transparent;color:inherit;border:1.5px solid var(--line)}
-header button.ghost{border-color:#3a4a63}
-button.danger{background:transparent;color:var(--bad);border:1.5px solid var(--line);padding:6px 12px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
-.tabs{display:flex;gap:6px;margin-bottom:16px;overflow-x:auto}
-.tabs button{background:var(--card);color:var(--ink);border:1.5px solid var(--line)}
-.tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
-.price{font-size:2.2rem;font-weight:800;color:var(--acc);min-height:2.8rem}
-table{width:100%;border-collapse:collapse;font-size:.92rem}
-th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
-th{color:var(--mute);font-weight:600}
-.scroll{overflow-x:auto}
-.pill{display:inline-block;padding:2px 10px;border-radius:99px;background:#eef1f6;font-size:.8rem;font-weight:600}
-.seg{display:flex;gap:8px}.seg label{flex:1;margin:0;border:1.5px solid var(--line);border-radius:10px;padding:10px;color:var(--ink);cursor:pointer;transition:all .15s}
-.seg input{display:none}.seg label:has(input:checked){border-color:var(--acc);background:#fff4ee}
-#toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,80px);background:var(--ink);color:#fff;padding:12px 20px;border-radius:12px;transition:transform .3s;z-index:9;max-width:90%}
-#toast.show{transform:translate(-50%,0)}#toast.bad{background:var(--bad)}
-.center{max-width:400px;margin:40px auto}.mute{color:var(--mute);font-size:.9rem}
+.hero button.ghost{border-color:#3a4a63;color:#fff}
+button.danger{background:transparent;color:var(--bad);border:1.5px solid var(--line);padding:8px 14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.row>*{flex:1;min-width:110px}
+.mute{color:var(--mute);font-size:.9rem}.price{font-size:2.2rem;font-weight:800;color:var(--acc);line-height:1.2}
+/* hero */
+.hero{background:radial-gradient(900px 420px at 90% -10%,#2b4a7c 0,transparent 60%),var(--ink);color:#fff;position:relative;overflow:hidden}
+.hero .wrap{padding:60px 16px 100px;position:relative;z-index:1}
+.hgrid{display:grid;grid-template-columns:1.1fr .9fr;gap:36px;align-items:center}
+@media(max-width:820px){.hgrid{grid-template-columns:1fr}}
+.hero h1{font-size:clamp(2.2rem,5vw,3.5rem);line-height:1.06;margin:0 0 16px;font-weight:800}
+.hero p{color:#b9c6dc;max-width:48ch;font-size:1.08rem}.cta{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+.qcard{color:var(--ink);margin:0;box-shadow:0 20px 50px rgba(0,0,0,.35)}
+.route{position:absolute;left:0;bottom:0;width:100%;height:100px}
+@media(prefers-reduced-motion:reduce){.route circle{display:none}.view{animation:none}}
+.sec{padding:56px 0}.sec.alt{background:#fff}
+.steps4{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
+.steps4 div{background:var(--bg);border-radius:14px;padding:18px}.steps4 b{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--ink);color:#fff;margin-bottom:8px}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.svc{border:2px solid var(--line);border-radius:16px;padding:22px}.svc.hot{border-color:var(--acc)}.svc h3{margin:0 0 6px}.svc ul{padding-left:18px;color:var(--mute)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}.chips span{background:var(--bg);padding:6px 14px;border-radius:99px;font-weight:700;font-size:.9rem}
+details{background:var(--card);border-radius:12px;padding:14px 18px;margin-bottom:10px}summary{cursor:pointer;font-weight:700}
+.band{background:var(--acc);color:#fff;text-align:center;padding:44px 16px}.band button{background:var(--ink);margin-top:10px}
+footer{background:var(--ink);color:#8d9bb3;text-align:center;padding:26px 16px;font-size:.9rem}
+/* booking */
+.steps{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}.steps div{flex:1;min-width:120px;padding:10px 14px;border-radius:10px;background:#e8ecf3;color:var(--mute);font-weight:700;font-size:.9rem}
+.steps .on{background:var(--ink);color:#fff}.steps .done{background:#dff3e8;color:var(--ok)}
+.bgrid{display:grid;grid-template-columns:1fr 300px;gap:18px;align-items:start}@media(max-width:820px){.bgrid{grid-template-columns:1fr}}
+.seg{display:flex;gap:8px;flex-wrap:wrap}.seg label{flex:1;margin:0;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--ink);cursor:pointer;transition:all .15s}
+.seg label:has(input:checked){border-color:var(--acc);background:#fff4ee}.chk{display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink)}
+.nav2{margin-top:18px;justify-content:space-between}.nav2>*{flex:0 0 auto}
+.rv{width:100%;border-collapse:collapse}.rv td{padding:8px 0;border-bottom:1px solid var(--line);vertical-align:top}.rv td:first-child{color:var(--mute);width:38%}
+.ok{text-align:center;padding:30px 10px}.tid{font-size:2rem;font-weight:800;letter-spacing:2px;color:var(--acc)}
+/* orders, tracking */
+.ord{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:center}.oact{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pill{display:inline-block;padding:2px 10px;border-radius:99px;background:#eef1f6;font-size:.8rem;font-weight:700}.pill.Delivered{background:#dff3e8;color:var(--ok)}.pill.Cancelled{background:#fde8e8;color:var(--bad)}
+.tl{list-style:none;margin:14px 0 0;padding:0 0 0 22px;border-left:3px solid var(--line)}.tl li{position:relative;padding:0 0 18px 14px}.tl li:before{content:"";position:absolute;left:-30px;top:5px;width:13px;height:13px;border-radius:50%;background:var(--acc);box-shadow:0 0 0 4px #fff}
+.tl li span{display:block}
+/* admin */
+.tabs{display:flex;gap:6px;margin-bottom:16px;overflow-x:auto}.tabs button{background:var(--card);color:var(--ink);border:1.5px solid var(--line)}.tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+table{width:100%;border-collapse:collapse;font-size:.92rem}th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--mute)}.scroll{overflow-x:auto}
+#toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,90px);background:var(--ink);color:#fff;padding:12px 20px;border-radius:12px;transition:transform .3s;z-index:9;max-width:90%}
+#toast.show{transform:translate(-50%,0)}#toast.bad{background:var(--bad)}.center{max-width:400px;margin:30px auto}
+.mo{position:fixed;inset:0;background:rgba(15,27,45,.6);display:grid;place-items:center;z-index:20;padding:12px}
+.mb{background:#fff;border-radius:16px;padding:16px;width:min(620px,100%);max-height:94vh;overflow:auto}#map{height:320px;border-radius:12px;margin:10px 0}
+.inv{max-width:760px;margin:0 auto}.inv h1{margin:0;font-size:1.6rem}.inv .tot td{font-weight:800;font-size:1.1rem}.r{text-align:right}
+@media print{header,footer,.noprint,#toast{display:none!important}body{background:#fff}.card{box-shadow:none}}
 </style></head><body>
-<header><b id="brand">Courier</b><div id="nav"></div></header>
-<main id="app"></main><div id="toast"></div>
+<header><div class="logo" id="brand"></div><nav id="nav"></nav></header>
+<div id="app"></div><div id="toast"></div>
 <script>
-const $=s=>document.querySelector(s);
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-async function api(u,m='GET',b){
-  const r=await fetch('/api/'+u,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
-  const d=await r.json().catch(()=>({}));
-  if(!r.ok)throw new Error(d.error||'Something went wrong');return d}
-let tt;const toast=(t,bad)=>{const e=$('#toast');e.textContent=t;e.className='show'+(bad?' bad':'');clearTimeout(tt);tt=setTimeout(()=>e.className='',2800)};
+async function api(u,m='GET',b){const r=await fetch('/api/'+u,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
+  const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Something went wrong');return d}
+let tt;const toast=(t,bad)=>{const e=$('#toast');e.textContent=t;e.className='show'+(bad?' bad':'');clearTimeout(tt);tt=setTimeout(()=>e.className='',3000)};
 const run=f=>async(...a)=>{try{await f(...a)}catch(e){toast(e.message,1)}};
-let me=null,cfg=null,tab='pricing';
+const show=h=>{$('#app').innerHTML='<div class="view">'+h+'</div>'};
+const go=h=>location.hash===h?render():(location.hash=h);
+const fmt=s=>new Date(s.replace(' ','T')+'Z').toLocaleString([], {dateStyle:'medium',timeStyle:'short'});
+let me=null,cfg=null,after=null,tab='pricing',step=1,qres=null;
 const money=n=>cfg.settings.currency+Number(n).toFixed(2);
 const STATUS=['Placed','Picked up','In transit','Delivered','Cancelled'];
+const PARCELS=['Documents','Clothes','Electronics','Fragile item','Gift','Other'];
+const SLOTS=['Morning (9am-12pm)','Afternoon (12pm-4pm)','Evening (4pm-8pm)'];
+const today=()=>new Date().toISOString().slice(0,10);
+let bk={service:'standard',parcel:'Documents',kg:1,value:'',insured:false,pay:'pickup',pickup_date:today(),pickup_slot:SLOTS[0]};
 
-async function boot(){
-  cfg=await api('config');
-  const s=cfg.settings.company;document.title=s;
-  $('#brand').innerHTML=esc(s).replace(/^(\S+)/,'$1<i>.</i>');
-  try{me=await api('me')}catch{me=null}
-  $('#nav').innerHTML=me?`<span class="mute" style="margin-right:12px;color:#aab6cb">${esc(me.name)}${me.role==='admin'?' (admin)':''}</span><button class="ghost" id="out">Log out</button>`:'';
-  if(me)$('#out').onclick=run(async()=>{await api('logout','POST');boot()});
-  me?(me.role==='admin'?adminView():userView()):authView()}
-const show=h=>{$('#app').innerHTML='<div class="view">'+h+'</div>'};
+async function boot(){cfg=await api('config');const c=cfg.cities;bk.a=bk.a||c[0];bk.b=bk.b||c[1]||c[0];
+  document.title=cfg.settings.company;$('#brand').innerHTML=esc(cfg.settings.company).replace(/^(\S+)/,'$1<i>.</i>');
+  $('#brand').onclick=()=>go('#/');await refresh();render()}
+async function refresh(){try{me=await api('me')}catch{me=null}
+  const L=(h,t)=>`<a href="${h}">${t}</a>`;
+  $('#nav').innerHTML=L('#/','Home')+L('#/track','Track')+(me?L('#/book','Book')+L('#/orders','My orders')+(me.role==='admin'?L('#/admin','Admin'):'')+'<a href="#" id="out">Log out</a>':L('#/login','Log in')+L('#/signup','Sign up'));
+  if(me)$('#out').onclick=run(async e=>{e.preventDefault();await api('logout','POST');me=null;await refresh();go('#/')})}
+function render(){const [p,arg]=location.hash.slice(2).split('/');
+  if(['book','orders','invoice'].includes(p)&&!me){after='#/'+p;return go('#/login')}
+  if(p==='admin'&&me?.role!=='admin')return go('#/');
+  ({'':home,login:()=>authView(0),signup:()=>authView(1),track:()=>trackView(arg),invoice:()=>invoiceView(arg),book:bookView,orders:ordersView,admin:adminView}[p]||home)();scrollTo(0,0)}
+addEventListener('hashchange',render);
 
-function authView(reg){
-  show(`<div class="card center"><h2>${reg?'Create your account':'Welcome back'}</h2>
-  ${reg?'<label>Name</label><input id="n">':''}<label>Email</label><input id="e" type="email">
-  <label>Password</label><input id="p" type="password" placeholder="At least 8 characters">
-  <p><button id="go" style="width:100%">${reg?'Sign up':'Log in'}</button></p>
-  <p class="mute" style="text-align:center">${reg?'Have an account?':'New here?'} <a href="#" id="sw">${reg?'Log in':'Create an account'}</a></p></div>`);
-  $('#sw').onclick=e=>{e.preventDefault();authView(!reg)};
-  $('#go').onclick=run(async()=>{await api(reg?'register':'login','POST',{name:reg&&$('#n').value,email:$('#e').value,password:$('#p').value});boot()})}
+/* helpers for forms bound to bk */
+const sel=(f,o,l)=>`<div><label>${l}</label><select data-f="${f}">${o.map(x=>`<option ${x===bk[f]?'selected':''}>${esc(x)}</option>`).join('')}</select></div>`;
+const inp=(f,l,t='text',x='')=>`<div><label>${l}</label><input data-f="${f}" type="${t}" value="${esc(bk[f]??'')}" ${x}></div>`;
+function bind(cb){$$('[data-f]').forEach(i=>i.oninput=i.onchange=()=>{if(i.type==='radio'&&!i.checked)return;bk[i.dataset.f]=i.type==='checkbox'?i.checked:i.value;cb&&cb()})}
+const qs=()=>`quote?a=${encodeURIComponent(bk.a)}&b=${encodeURIComponent(bk.b)}&kg=${bk.kg}&service=${bk.service}&value=${bk.value||0}&insured=${bk.insured?1:0}`;
+async function price(el){try{const q=qres=await api(qs());el.innerHTML=`<div class="price">${money(q.price)}</div><div class="mute">${q.km} km. Shipping ${money(q.ship)}${q.insurance?', insurance '+money(q.insurance):''}</div>`}
+  catch(e){qres=null;el.innerHTML=`<div class="mute">${esc(e.message)}</div>`}}
+const seg=(f,o)=>`<div class="seg">${o.map(([v,l])=>`<label><input type="radio" name="${f}" data-f="${f}" value="${v}" ${bk[f]===v?'checked':''}> ${l}</label>`).join('')}</div>`;
 
-async function userView(){
-  const opts=cfg.cities.map(c=>`<option>${esc(c)}</option>`).join('');
-  show(`<div class="card"><h2>Send a parcel</h2><div class="grid">
-   <div><label>From</label><select id="a">${opts}</select></div><div><label>To</label><select id="b">${opts}</select></div>
-   <div><label>Weight (kg)</label><input id="kg" type="number" min="0.1" step="0.1" value="1"></div></div>
-   <label>Service</label><div class="seg"><label><input type="radio" name="sv" value="standard" checked>Standard</label><label><input type="radio" name="sv" value="express">Express</label></div>
-   <label>Pickup &amp; delivery details</label><textarea id="d" rows="2" placeholder="Addresses, phone numbers, notes"></textarea>
-   <div class="row" style="margin-top:14px"><div><div class="price" id="pr">–</div><div class="mute" id="km"></div></div><button id="book" style="flex:0 0 auto">Book pickup</button></div></div>
-   <div class="card"><h2>My orders</h2><div class="scroll" id="ords"></div></div>`);
-  if(cfg.cities.length>1)$('#b').selectedIndex=1;
-  const g=()=>({a:$('#a').value,b:$('#b').value,kg:$('#kg').value,service:document.querySelector('[name=sv]:checked').value});
-  const upd=async()=>{try{const x=g(),q=await api(`quote?a=${encodeURIComponent(x.a)}&b=${encodeURIComponent(x.b)}&kg=${x.kg}&service=${x.service}`);
-    $('#pr').textContent=money(q.price);$('#km').textContent=q.km+' km'}catch(e){$('#pr').textContent='–';$('#km').textContent=e.message}};
-  ['a','b','kg'].forEach(i=>$('#'+i).oninput=upd);document.querySelectorAll('[name=sv]').forEach(r=>r.onchange=upd);upd();
-  $('#book').onclick=run(async()=>{await api('orders','POST',{...g(),details:$('#d').value});toast('Pickup booked!');load()});
-  const load=async()=>{const o=await api('orders');$('#ords').innerHTML=o.length?`<table><tr><th>#</th><th>Route</th><th>Kg</th><th>Service</th><th>Price</th><th>Status</th></tr>${o.map(r=>`<tr><td>${r.id}</td><td>${esc(r.a)} → ${esc(r.b)}</td><td>${r.kg}</td><td>${r.service}</td><td>${money(r.price)}</td><td><span class="pill">${esc(r.status)}</span></td></tr>`).join('')}</table>`:'<p class="mute">No orders yet.</p>'};load()}
+/* landing page */
+function home(){const s=cfg.settings,c=cfg.cities;
+  show(`<section class="hero"><div class="wrap hgrid"><div><h1>Send it today.<br>Track it all the way.</h1>
+  <p>Door-to-door courier service across ${c.length} cities. Clear prices, pickup from your doorstep and live tracking from booking to delivery.</p>
+  <div class="cta"><button id="h1">Book a pickup</button><button class="ghost" id="h2">Track a parcel</button></div></div>
+  <div class="card qcard"><h2 style="font-size:1.2rem">Get an instant price</h2><div class="grid">${sel('a',c,'From')}${sel('b',c,'To')}${inp('kg','Weight (kg)','number','min="0.1" step="0.1"')}</div>
+  <label>Service</label>${seg('service',[['standard','Standard'],['express','Express']])}<div id="hq" style="margin-top:12px"></div>
+  <button id="h3" style="width:100%;margin-top:8px">Book this parcel</button></div></div>
+  <svg class="route" viewBox="0 0 1000 100" preserveAspectRatio="xMidYMax slice" aria-hidden="true"><path id="rp" d="M0 80 C200 5 360 110 520 55 S850 0 1000 45" fill="none" stroke="#ff6b2c" stroke-opacity=".55" stroke-width="3" stroke-dasharray="8 10"/><circle r="8" fill="#ff6b2c"><animateMotion dur="9s" repeatCount="indefinite"><mpath href="#rp"/></animateMotion></circle></svg></section>
+  <section class="sec"><div class="wrap"><h2>How it works</h2><div class="steps4">${[['Get a price','Pick your cities and weight to see the cost instantly.'],['Book a pickup','Choose a date and time slot and add both addresses.'],['We collect','Our courier picks the parcel up from your door.'],['Track it','Follow every status update with your tracking ID.']].map(([t,d],i)=>`<div><b>${i+1}</b><h3 style="margin:0">${t}</h3><span class="mute">${d}</span></div>`).join('')}</div></div></section>
+  <section class="sec alt"><div class="wrap"><h2>Simple, transparent pricing</h2><div class="two">
+  <div class="svc"><h3>Standard</h3><div class="mute">${s.currency}${s.base} base + ${s.currency}${s.perKm}/km + ${s.currency}${s.perKg}/kg</div><ul><li>Door-to-door pickup and delivery</li><li>Cash on delivery, no advance payment</li><li>Live tracking</li></ul></div>
+  <div class="svc hot"><h3>Express</h3><div class="mute">Standard rate x ${s.expressMult}</div><ul><li>Priority handling</li><li>Same pickup and tracking features</li><li>Optional parcel insurance</li></ul></div></div></div></section>
+  <section class="sec"><div class="wrap"><h2>Where we deliver</h2><div class="chips">${c.map(x=>`<span>${esc(x)}</span>`).join('')}</div></div></section>
+  <section class="sec alt"><div class="wrap"><h2>Questions</h2>
+  <details><summary>How do I pay?</summary><p class="mute">Payment is cash on delivery only. You pay the courier when your parcel arrives.</p></details>
+  <details><summary>Can I insure my parcel?</summary><p class="mute">Yes. Enter the declared value while booking and tick the insurance box. The charge is ${s.insurancePct}% of that value.</p></details>
+  <details><summary>Can I cancel a booking?</summary><p class="mute">You can cancel from My orders while the order is still in the Placed stage.</p></details></div></section>
+  <section class="band"><h2>Ready to send something?</h2><button id="h4">Book a pickup</button></section>
+  <footer>${esc(s.company)}. All rights reserved.</footer>`);
+  const B=()=>go('#/book');['h1','h3','h4'].forEach(i=>$('#'+i).onclick=B);$('#h2').onclick=()=>go('#/track');
+  const q=()=>price($('#hq'));bind(q);q()}
 
-function adminView(){
-  show(`<div class="tabs">${[['pricing','Prices & settings'],['routes','Routes & distance'],['orders','Orders'],['users','Users']].map(([k,l])=>`<button data-t="${k}" class="${k===tab?'on':''}">${l}</button>`).join('')}</div><div id="pane" class="card view"></div>`);
-  document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;adminView()});
-  const P=$('#pane');
-  if(tab==='pricing'){const s=cfg.settings,F=[['company','Company name'],['currency','Currency symbol'],['base','Base fee'],['perKm','Price per km'],['perKg','Price per kg'],['expressMult','Express multiplier (e.g. 1.6)'],['localKm','Distance for same-city parcels (km)'],['minPrice','Minimum price']];
-    P.innerHTML=`<h2>Prices &amp; settings</h2><div class="grid">${F.map(([k,l])=>`<div><label>${l}</label><input data-k="${k}" value="${esc(s[k])}"></div>`).join('')}</div><p><button id="sv">Save changes</button></p>
-    <p class="mute">Price = (base + km × per km + kg × per kg) × express multiplier, never below the minimum.</p>`;
-    $('#sv').onclick=run(async()=>{const b={};P.querySelectorAll('[data-k]').forEach(i=>b[i.dataset.k]=i.value);await api('admin/settings','PUT',b);cfg=await api('config');toast('Saved');boot()})}
-  if(tab==='routes')(run(async()=>{const r=await api('admin/routes');
-    P.innerHTML=`<h2>Routes &amp; distance</h2><div class="row"><div><label>City A</label><input id="ra"></div><div><label>City B</label><input id="rb"></div><div><label>Distance (km)</label><input id="rk" type="number"></div><button id="ad" style="flex:0 0 auto">Add / update</button></div>
+function authView(reg){show(`<div class="wrap"><div class="card center"><h2>${reg?'Create your account':'Welcome back'}</h2>${reg?'<label>Name</label><input id="n">':''}
+  <label>Email</label><input id="e" type="email"><label>Password</label><input id="p" type="password" placeholder="At least 8 characters">
+  <p><button id="go" style="width:100%">${reg?'Sign up':'Log in'}</button></p><p class="mute" style="text-align:center">${reg?'Have an account?':'New here?'} <a href="#/${reg?'login':'signup'}">${reg?'Log in':'Create an account'}</a></p></div></div>`);
+  $('#go').onclick=run(async()=>{await api(reg?'register':'login','POST',{name:reg&&$('#n').value,email:$('#e').value,password:$('#p').value});
+    await refresh();const t=after||(me.role==='admin'?'#/admin':'#/book');after=null;go(t)})}
+
+/* booking wizard */
+function bookView(){const c=cfg.cities;if(!bk.s_name)bk.s_name=me.name;
+  const head=['Parcel','Pickup and delivery','Review'].map((s,i)=>`<div class="${i+1===step?'on':i+1<step?'done':''}">${i+1}. ${s}</div>`).join('');
+  let b='';
+  if(step===1)b=`<div class="grid">${sel('a',c,'From')}${sel('b',c,'To')}${sel('parcel',PARCELS,'Parcel type')}${inp('kg','Weight (kg)','number','min="0.1" step="0.1"')}</div>
+   <label>Service</label>${seg('service',[['standard','Standard'],['express','Express (priority)']])}
+   <div class="grid">${inp('value','Declared value (optional)','number','min="0"')}<div><label>Insurance</label><label class="chk"><input type="checkbox" data-f="insured" ${bk.insured?'checked':''}> Cover my parcel (${cfg.settings.insurancePct}% of value)</label></div></div>`;
+  if(step===2)b=`<h3 style="margin:0">Pickup</h3><div class="grid">${inp('pickup_date','Pickup date','date',`min="${today()}"`)}${sel('pickup_slot',SLOTS,'Time slot')}</div>
+   <div class="grid">${inp('s_name','Sender name')}${inp('s_phone','Sender phone','tel')}</div><label>Pickup address <a href="#" data-m="s" style="color:var(--acc)">Pick on map</a></label><textarea data-f="s_addr" rows="2">${esc(bk.s_addr||'')}</textarea>
+   <h3 style="margin:18px 0 0">Delivery</h3><div class="grid">${inp('r_name','Receiver name')}${inp('r_phone','Receiver phone','tel')}</div><label>Delivery address <a href="#" data-m="r" style="color:var(--acc)">Pick on map</a></label><textarea data-f="r_addr" rows="2">${esc(bk.r_addr||'')}</textarea>
+   <label>Notes for the courier (optional)</label><textarea data-f="details" rows="2">${esc(bk.details||'')}</textarea>`;
+  if(step===3){const R=[['Route',`${bk.a} to ${bk.b}`],['Parcel',`${bk.parcel}, ${bk.kg} kg, ${bk.service}`],['Pickup',`${bk.pickup_date}, ${bk.pickup_slot}`],['From',`${bk.s_name}, ${bk.s_phone}<br>${bk.s_addr}`],['To',`${bk.r_name}, ${bk.r_phone}<br>${bk.r_addr}`]];
+   if(bk.insured)R.push(['Insured value',money(bk.value)]);
+   b=`<table class="rv">${R.map(([k,v])=>`<tr><td>${k}</td><td>${esc(v).replace(/&lt;br&gt;/g,'<br>')}</td></tr>`).join('')}</table><p class="card" style="background:#fff4ee;margin:16px 0 0"><b>Payment: cash on delivery.</b> You pay the courier in cash when the parcel is delivered.</p>`}
+  show(`<div class="wrap"><h2>Book a courier</h2><div class="steps">${head}</div><div class="bgrid"><div class="card">${b}<div class="row nav2">${step>1?'<button class="ghost" id="bb">Back</button>':'<span></span>'}<button id="nx">${step===3?'Confirm booking':'Continue'}</button></div></div>
+   <div class="card"><div class="mute">Estimated total</div><div id="pp"></div><p class="mute">Final price is confirmed by the server when you book.</p></div></div></div>`);
+  const q=()=>price($('#pp'));bind(step===1?q:null);q();$$('[data-m]').forEach(a=>a.onclick=run(async e=>{e.preventDefault();await mapPick(a.dataset.m)}));
+  if($('#bb'))$('#bb').onclick=()=>{step--;bookView()};
+  $('#nx').onclick=run(async()=>{
+    if(step===1){if(!qres)throw Error('We do not have a route for these cities yet');if(bk.insured&&!(+bk.value>0))throw Error('Enter the declared value to add insurance');step=2;return bookView()}
+    if(step===2){if(['s_name','s_phone','s_addr','r_name','r_phone','r_addr','pickup_date'].some(k=>!String(bk[k]||'').trim()))throw Error('Please fill in all pickup and delivery details');
+      if(![bk.s_phone,bk.r_phone].every(p=>p.replace(/\D/g,'').length>=10))throw Error('Enter valid phone numbers (10 digits)');step=3;return bookView()}
+    const r=await api('orders','POST',bk);step=1;
+    show(`<div class="wrap"><div class="card ok"><h2>Booking confirmed!</h2><p class="mute">Your tracking ID</p><div class="tid">${r.tracking}</div><p>Total ${money(r.price)}, payable in cash on delivery.</p>
+     <div class="row" style="justify-content:center"><button id="t1" style="flex:0 0 auto">Track this parcel</button><button class="ghost" id="t3" style="flex:0 0 auto">View invoice</button><button class="ghost" id="t2" style="flex:0 0 auto">Book another</button></div></div></div>`);
+    $('#t1').onclick=()=>go('#/track/'+r.tracking);$('#t2').onclick=()=>go('#/book');$('#t3').onclick=()=>go('#/invoice/'+r.id)})}
+
+async function ordersView(){show('<div class="wrap"><h2>My orders</h2><div id="ol"></div></div>');
+  run(async()=>{const o=await api('orders');
+    $('#ol').innerHTML=o.length?o.map(r=>`<div class="card ord"><div><b>${esc(r.tracking)}</b> <span class="pill ${esc(r.status)}">${esc(r.status)}</span>
+     <div class="mute">${esc(r.a)} to ${esc(r.b)}, ${r.kg} kg, ${r.service}${r.pickup_date?'. Pickup '+esc(r.pickup_date)+', '+esc(r.pickup_slot):''}</div></div>
+     <div class="oact"><b>${money(r.price)}</b><button class="ghost" data-t="${esc(r.tracking)}">Track</button><button class="ghost" data-i="${r.id}">Invoice</button>${r.status==='Placed'?`<button class="danger" data-c="${r.id}">Cancel</button>`:''}</div></div>`).join('')
+     :'<div class="card">No orders yet. <a href="#/book">Book your first pickup</a></div>';
+    $$('[data-t]').forEach(b=>b.onclick=()=>go('#/track/'+b.dataset.t));$$('[data-i]').forEach(b=>b.onclick=()=>go('#/invoice/'+b.dataset.i));
+    $$('[data-c]').forEach(b=>b.onclick=run(async()=>{if(confirm('Cancel this order?')){await api(`orders/${b.dataset.c}/cancel`,'POST');toast('Order cancelled');ordersView()}}))})()}
+
+function trackView(id){show(`<div class="wrap"><h2>Track your parcel</h2><div class="card row"><div><label>Tracking ID</label><input id="tid" value="${esc(id||'')}" placeholder="e.g. SR1A2B3C4D"></div><button id="tg" style="flex:0 0 auto">Track</button></div><div id="tr"></div></div>`);
+  const t=()=>go('#/track/'+encodeURIComponent($('#tid').value.trim()));$('#tg').onclick=t;$('#tid').onkeydown=e=>e.key==='Enter'&&t();
+  if(id)run(async()=>{const d=await api('track/'+encodeURIComponent(id));
+    $('#tr').innerHTML=`<div class="card"><b>${esc(d.tracking)}</b> <span class="pill ${esc(d.status)}">${esc(d.status)}</span><div class="mute">${esc(d.a)} to ${esc(d.b)}, ${esc(d.parcel||'Parcel')}, ${d.service}</div>
+     <ol class="tl">${d.events.slice().reverse().map(e=>`<li><b>${esc(e.status)}</b><span class="mute">${fmt(e.at)}</span></li>`).join('')}</ol></div>`})()}
+
+/* admin */
+function adminView(){show(`<div class="wrap"><div class="tabs">${[['pricing','Prices and settings'],['routes','Routes and distance'],['orders','Orders'],['users','Users']].map(([k,l])=>`<button data-t="${k}" class="${k===tab?'on':''}">${l}</button>`).join('')}</div><div id="pane" class="card"></div></div>`);
+  $$('.tabs button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;adminView()});const P=$('#pane'),re=async()=>{cfg=await api('config');adminView()};
+  if(tab==='pricing'){const s=cfg.settings,F=[['company','Company name'],['currency','Currency symbol'],['base','Base fee'],['perKm','Price per km'],['perKg','Price per kg'],['expressMult','Express multiplier'],['localKm','Same-city distance (km)'],['minPrice','Minimum price'],['insurancePct','Insurance (% of declared value)'],['companyAddress','Business address (for invoices)'],['companyPhone','Business phone (for invoices)']];
+    P.innerHTML=`<h2>Prices and settings</h2><div class="grid">${F.map(([k,l])=>`<div><label>${l}</label><input data-k="${k}" value="${esc(s[k])}"></div>`).join('')}</div><p><button id="sv">Save changes</button></p><p class="mute">Price = (base + km x per km + kg x per kg) x express multiplier, never below the minimum, plus insurance.</p>`;
+    $('#sv').onclick=run(async()=>{const b={};P.querySelectorAll('[data-k]').forEach(i=>b[i.dataset.k]=i.value);await api('admin/settings','PUT',b);toast('Saved');boot()})}
+  if(tab==='routes')run(async()=>{const r=await api('admin/routes');
+    P.innerHTML=`<h2>Routes and distance</h2><div class="row"><div><label>City A</label><input id="ra"></div><div><label>City B</label><input id="rb"></div><div><label>Distance (km)</label><input id="rk" type="number"></div><button id="ad" style="flex:0 0 auto">Add / update</button></div>
     <div class="scroll"><table><tr><th>From</th><th>To</th><th>km</th><th></th></tr>${r.map(x=>`<tr><td>${esc(x.a)}</td><td>${esc(x.b)}</td><td>${x.km}</td><td><button class="danger" data-d="${x.id}">Delete</button></td></tr>`).join('')}</table></div>`;
-    $('#ad').onclick=run(async()=>{await api('admin/routes','POST',{a:$('#ra').value,b:$('#rb').value,km:+$('#rk').value});cfg=await api('config');adminView()});
-    P.querySelectorAll('[data-d]').forEach(b=>b.onclick=run(async()=>{await api('admin/routes/'+b.dataset.d,'DELETE');cfg=await api('config');adminView()}))}))();
-  if(tab==='orders')(run(async()=>{const o=await api('admin/orders');
-    P.innerHTML=`<h2>Orders</h2><div class="scroll">${o.length?`<table><tr><th>#</th><th>Customer</th><th>Route</th><th>Kg</th><th>Price</th><th>Details</th><th>Status</th><th></th></tr>${o.map(r=>`<tr><td>${r.id}</td><td>${esc(r.customer)}<div class="mute">${esc(r.email)}</div></td><td>${esc(r.a)} → ${esc(r.b)}<div class="mute">${r.service}</div></td><td>${r.kg}</td><td>${money(r.price)}</td><td>${esc(r.details)}</td>
+    $('#ad').onclick=run(async()=>{await api('admin/routes','POST',{a:$('#ra').value,b:$('#rb').value,km:+$('#rk').value});await re()});
+    $$('[data-d]').forEach(b=>b.onclick=run(async()=>{await api('admin/routes/'+b.dataset.d,'DELETE');await re()}))})();
+  if(tab==='orders')run(async()=>{const o=await api('admin/orders');
+    P.innerHTML=`<h2>Orders</h2><div class="scroll">${o.length?`<table><tr><th>Tracking</th><th>Customer</th><th>Route</th><th>Price</th><th>Details</th><th>Status</th><th></th></tr>${o.map(r=>`<tr><td><b>${esc(r.tracking)}</b><div class="mute">#${r.id}</div></td><td>${esc(r.customer)}<div class="mute">${esc(r.email)}</div></td><td>${esc(r.a)} to ${esc(r.b)}<div class="mute">${r.kg} kg, ${r.service}, ${esc(r.parcel||'')}</div></td><td>${money(r.price)}<div class="mute">cash on delivery</div></td>
+    <td><details style="padding:0;background:none"><summary>View</summary><div class="mute">Pickup ${esc(r.pickup_date||'')}, ${esc(r.pickup_slot||'')}<br><b>From:</b> ${esc(r.s_name)} ${esc(r.s_phone)}, ${esc(r.s_addr)}<br><b>To:</b> ${esc(r.r_name)} ${esc(r.r_phone)}, ${esc(r.r_addr)}<br>${r.value?'Insured value '+money(r.value)+'<br>':''}${esc(r.details||'')}<br>${r.s_lat?`<a href="https://www.openstreetmap.org/?mlat=${r.s_lat}&mlon=${r.s_lng}#map=16/${r.s_lat}/${r.s_lng}" target="_blank" rel="noopener">Pickup map</a> `:''}${r.r_lat?`<a href="https://www.openstreetmap.org/?mlat=${r.r_lat}&mlon=${r.r_lng}#map=16/${r.r_lat}/${r.r_lng}" target="_blank" rel="noopener">Delivery map</a> `:''}<a href="#/invoice/${r.id}">Invoice</a></div></details></td>
     <td><select data-o="${r.id}">${STATUS.map(s=>`<option ${s===r.status?'selected':''}>${s}</option>`).join('')}</select></td><td><button class="danger" data-x="${r.id}">Delete</button></td></tr>`).join('')}</table>`:'<p class="mute">No orders yet.</p>'}</div>`;
-    P.querySelectorAll('[data-o]').forEach(s=>s.onchange=run(async()=>{await api('admin/orders/'+s.dataset.o,'PUT',{status:s.value});toast('Status updated')}));
-    P.querySelectorAll('[data-x]').forEach(b=>b.onclick=run(async()=>{if(confirm('Delete this order?')){await api('admin/orders/'+b.dataset.x,'DELETE');adminView()}}))}))();
-  if(tab==='users')(run(async()=>{const u=await api('admin/users');
-    P.innerHTML=`<h2>Users</h2><div class="scroll"><table><tr><th>Name</th><th>Email</th><th>Role</th><th></th></tr>${u.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.email)}</td>
-    <td><select data-r="${x.id}"${x.id===me.id?' disabled':''}><option ${x.role==='user'?'selected':''}>user</option><option ${x.role==='admin'?'selected':''}>admin</option></select></td>
-    <td>${x.id===me.id?'':`<button class="danger" data-u="${x.id}">Delete</button>`}</td></tr>`).join('')}</table></div>`;
-    P.querySelectorAll('[data-r]').forEach(s=>s.onchange=run(async()=>{await api('admin/users/'+s.dataset.r,'PUT',{role:s.value});toast('Role updated')}));
-    P.querySelectorAll('[data-u]').forEach(b=>b.onclick=run(async()=>{if(confirm('Delete this user?')){await api('admin/users/'+b.dataset.u,'DELETE');adminView()}}))}))();
-}
+    $$('[data-o]').forEach(s=>s.onchange=run(async()=>{await api('admin/orders/'+s.dataset.o,'PUT',{status:s.value});toast('Status updated')}));
+    $$('[data-x]').forEach(b=>b.onclick=run(async()=>{if(confirm('Delete this order?')){await api('admin/orders/'+b.dataset.x,'DELETE');adminView()}}))})();
+  if(tab==='users')run(async()=>{const u=await api('admin/users');
+    P.innerHTML=`<h2>Users</h2><div class="scroll"><table><tr><th>Name</th><th>Email</th><th>Role</th><th></th></tr>${u.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.email)}</td><td><select data-r="${x.id}"${x.id===me.id?' disabled':''}><option ${x.role==='user'?'selected':''}>user</option><option ${x.role==='admin'?'selected':''}>admin</option></select></td><td>${x.id===me.id?'':`<button class="danger" data-u="${x.id}">Delete</button>`}</td></tr>`).join('')}</table></div>`;
+    $$('[data-r]').forEach(s=>s.onchange=run(async()=>{await api('admin/users/'+s.dataset.r,'PUT',{role:s.value});toast('Role updated')}));
+    $$('[data-u]').forEach(b=>b.onclick=run(async()=>{if(confirm('Delete this user?')){await api('admin/users/'+b.dataset.u,'DELETE');adminView()}}))})()}
+let LL;const loadLeaflet=()=>LL||(LL=new Promise((ok,no)=>{const l=document.createElement('link');l.rel='stylesheet';l.href='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';document.head.append(l);
+  const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';s.onload=ok;s.onerror=()=>{LL=null;no(Error('Map could not load'))};document.head.append(s)}));
+async function mapPick(p){await loadLeaflet();
+  const d=document.createElement('div');d.className='mo';d.innerHTML=`<div class="mb"><h3 style="margin:0 0 8px">${p==='s'?'Pickup':'Delivery'} location</h3><div class="row"><input id="ms" placeholder="Search area, street or landmark"><button id="mg" style="flex:0 0 auto">Search</button><button class="ghost" id="ml" style="flex:0 0 auto">Use my location</button></div><div id="map"></div><div class="mute" id="ma">Tap the map to drop a pin.</div><div class="row" style="margin-top:12px"><button class="ghost" id="mc">Cancel</button><button id="mu">Use this location</button></div></div>`;
+  document.body.append(d);const has=!!bk[p+'_lat'];
+  const map=L.map('map').setView([bk[p+'_lat']||28.61,bk[p+'_lng']||77.21],has?16:11);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap contributors',maxZoom:19}).addTo(map);
+  let pin=null,addr='';
+  const put=async(la,ln)=>{pin&&pin.remove();pin=L.circleMarker([la,ln],{radius:10,color:'#ff6b2c',fillOpacity:.8}).addTo(map);pin.ll=[la,ln];
+    try{addr=(await (await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${la}&lon=${ln}`)).json()).display_name||''}catch{addr=''}$('#ma').textContent=addr||'Pin dropped'};
+  map.on('click',e=>put(e.latlng.lat,e.latlng.lng));if(has)put(bk[p+'_lat'],bk[p+'_lng']);
+  $('#mg').onclick=run(async()=>{const r=await (await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent($('#ms').value))).json();if(!r[0])throw Error('Place not found');map.setView([+r[0].lat,+r[0].lon],16);put(+r[0].lat,+r[0].lon)});
+  $('#ml').onclick=()=>navigator.geolocation?navigator.geolocation.getCurrentPosition(g=>{map.setView([g.coords.latitude,g.coords.longitude],17);put(g.coords.latitude,g.coords.longitude)},()=>toast('Location permission denied',1)):toast('Location not supported',1);
+  $('#mc').onclick=()=>d.remove();
+  $('#mu').onclick=()=>{if(!pin)return toast('Tap the map to drop a pin',1);bk[p+'_lat']=pin.ll[0];bk[p+'_lng']=pin.ll[1];if(addr)bk[p+'_addr']=addr;d.remove();bookView()};
+  setTimeout(()=>map.invalidateSize(),60)}
+
+function invoiceView(id){show('<div class="wrap"><div class="inv card" id="iv">Loading...</div></div>');
+  run(async()=>{const o=await api('orders/'+id),s=o.company,m=n=>s.currency+Number(n).toFixed(2),ship=o.price-o.insurance;
+    $('#iv').innerHTML=`<div class="row" style="align-items:start"><div><h1>${esc(s.company)}</h1><div class="mute">${esc(s.companyAddress)}<br>${esc(s.companyPhone)}</div></div><div style="text-align:right"><h2 style="margin:0">INVOICE</h2><b>INV-${String(o.id).padStart(5,'0')}</b><div class="mute">${fmt(o.created)}<br>Tracking ${esc(o.tracking)}</div></div></div>
+    <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
+    <div class="grid"><div><div class="mute">Billed to</div><b>${esc(o.customer)}</b><br>${esc(o.email)}</div><div><div class="mute">Pickup</div>${esc(o.s_name)} ${esc(o.s_phone)}<br>${esc(o.s_addr)}</div><div><div class="mute">Delivery</div>${esc(o.r_name)} ${esc(o.r_phone)}<br>${esc(o.r_addr)}</div></div>
+    <table style="margin-top:18px"><tr><th>Description</th><th class="r">Amount</th></tr><tr><td>${esc(o.service)} courier, ${esc(o.a)} to ${esc(o.b)}<div class="mute">${esc(o.parcel||'Parcel')}, ${o.kg} kg</div></td><td class="r">${m(ship)}</td></tr>${o.insurance?`<tr><td>Insurance (declared value ${m(o.value)})</td><td class="r">${m(o.insurance)}</td></tr>`:''}<tr class="tot"><td>Total</td><td class="r">${m(o.price)}</td></tr></table>
+    <p><b>Payment:</b> cash on delivery. ${o.status==='Cancelled'?'This order was cancelled, nothing is due.':'Please pay '+m(o.price)+' in cash to the courier when the parcel is delivered.'}</p>
+    <div class="row noprint"><button id="pr" style="flex:0 0 auto">Print / save as PDF</button><button class="ghost" id="bk2" style="flex:0 0 auto">Back</button></div>`;
+    $('#pr').onclick=()=>print();$('#bk2').onclick=()=>history.back()})()}
 boot();
 </script></body></html>
