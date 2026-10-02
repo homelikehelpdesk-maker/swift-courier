@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Courier</title>
+<style>
+:root{--ink:#0f1b2d;--acc:#ff6b2c;--bg:#f4f6fa;--card:#fff;--mute:#6b778c;--line:#e2e7ef;--ok:#1f9d63;--bad:#d64545}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:14px 20px;position:sticky;top:0;z-index:5}
+header b{font-size:1.15rem;letter-spacing:.2px}header b i{color:var(--acc);font-style:normal}
+main{max-width:980px;margin:0 auto;padding:22px 16px 60px}
+.view{animation:in .35s ease}@keyframes in{from{opacity:0;transform:translateY(8px)}}
+.card{background:var(--card);border-radius:14px;padding:20px;margin-bottom:18px;box-shadow:0 1px 3px rgba(15,27,45,.08)}
+h2{margin:0 0 14px;font-size:1.25rem}
+label{display:block;font-size:.85rem;color:var(--mute);margin:10px 0 4px}
+input,select,textarea{width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:10px;font:inherit;background:#fff;transition:border .15s,box-shadow .15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px rgba(255,107,44,.18)}
+button{font:inherit;font-weight:600;border:0;border-radius:10px;padding:11px 18px;cursor:pointer;background:var(--acc);color:#fff;transition:transform .1s,opacity .15s}
+button:hover{opacity:.9}button:active{transform:scale(.97)}
+button.ghost{background:transparent;color:inherit;border:1.5px solid var(--line)}
+header button.ghost{border-color:#3a4a63}
+button.danger{background:transparent;color:var(--bad);border:1.5px solid var(--line);padding:6px 12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.tabs{display:flex;gap:6px;margin-bottom:16px;overflow-x:auto}
+.tabs button{background:var(--card);color:var(--ink);border:1.5px solid var(--line)}
+.tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.price{font-size:2.2rem;font-weight:800;color:var(--acc);min-height:2.8rem}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{color:var(--mute);font-weight:600}
+.scroll{overflow-x:auto}
+.pill{display:inline-block;padding:2px 10px;border-radius:99px;background:#eef1f6;font-size:.8rem;font-weight:600}
+.seg{display:flex;gap:8px}.seg label{flex:1;margin:0;border:1.5px solid var(--line);border-radius:10px;padding:10px;color:var(--ink);cursor:pointer;transition:all .15s}
+.seg input{display:none}.seg label:has(input:checked){border-color:var(--acc);background:#fff4ee}
+#toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,80px);background:var(--ink);color:#fff;padding:12px 20px;border-radius:12px;transition:transform .3s;z-index:9;max-width:90%}
+#toast.show{transform:translate(-50%,0)}#toast.bad{background:var(--bad)}
+.center{max-width:400px;margin:40px auto}.mute{color:var(--mute);font-size:.9rem}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.row>*{flex:1;min-width:110px}
+</style></head><body>
+<header><b id="brand">Courier</b><div id="nav"></div></header>
+<main id="app"></main><div id="toast"></div>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function api(u,m='GET',b){
+  const r=await fetch('/api/'+u,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.error||'Something went wrong');return d}
+let tt;const toast=(t,bad)=>{const e=$('#toast');e.textContent=t;e.className='show'+(bad?' bad':'');clearTimeout(tt);tt=setTimeout(()=>e.className='',2800)};
+const run=f=>async(...a)=>{try{await f(...a)}catch(e){toast(e.message,1)}};
+let me=null,cfg=null,tab='pricing';
+const money=n=>cfg.settings.currency+Number(n).toFixed(2);
+const STATUS=['Placed','Picked up','In transit','Delivered','Cancelled'];
+
+async function boot(){
+  cfg=await api('config');
+  const s=cfg.settings.company;document.title=s;
+  $('#brand').innerHTML=esc(s).replace(/^(\S+)/,'$1<i>.</i>');
+  try{me=await api('me')}catch{me=null}
+  $('#nav').innerHTML=me?`<span class="mute" style="margin-right:12px;color:#aab6cb">${esc(me.name)}${me.role==='admin'?' (admin)':''}</span><button class="ghost" id="out">Log out</button>`:'';
+  if(me)$('#out').onclick=run(async()=>{await api('logout','POST');boot()});
+  me?(me.role==='admin'?adminView():userView()):authView()}
+const show=h=>{$('#app').innerHTML='<div class="view">'+h+'</div>'};
+
+function authView(reg){
+  show(`<div class="card center"><h2>${reg?'Create your account':'Welcome back'}</h2>
+  ${reg?'<label>Name</label><input id="n">':''}<label>Email</label><input id="e" type="email">
+  <label>Password</label><input id="p" type="password" placeholder="At least 8 characters">
+  <p><button id="go" style="width:100%">${reg?'Sign up':'Log in'}</button></p>
+  <p class="mute" style="text-align:center">${reg?'Have an account?':'New here?'} <a href="#" id="sw">${reg?'Log in':'Create an account'}</a></p></div>`);
+  $('#sw').onclick=e=>{e.preventDefault();authView(!reg)};
+  $('#go').onclick=run(async()=>{await api(reg?'register':'login','POST',{name:reg&&$('#n').value,email:$('#e').value,password:$('#p').value});boot()})}
+
+async function userView(){
+  const opts=cfg.cities.map(c=>`<option>${esc(c)}</option>`).join('');
+  show(`<div class="card"><h2>Send a parcel</h2><div class="grid">
+   <div><label>From</label><select id="a">${opts}</select></div><div><label>To</label><select id="b">${opts}</select></div>
+   <div><label>Weight (kg)</label><input id="kg" type="number" min="0.1" step="0.1" value="1"></div></div>
+   <label>Service</label><div class="seg"><label><input type="radio" name="sv" value="standard" checked>Standard</label><label><input type="radio" name="sv" value="express">Express</label></div>
+   <label>Pickup &amp; delivery details</label><textarea id="d" rows="2" placeholder="Addresses, phone numbers, notes"></textarea>
+   <div class="row" style="margin-top:14px"><div><div class="price" id="pr">–</div><div class="mute" id="km"></div></div><button id="book" style="flex:0 0 auto">Book pickup</button></div></div>
+   <div class="card"><h2>My orders</h2><div class="scroll" id="ords"></div></div>`);
+  if(cfg.cities.length>1)$('#b').selectedIndex=1;
+  const g=()=>({a:$('#a').value,b:$('#b').value,kg:$('#kg').value,service:document.querySelector('[name=sv]:checked').value});
+  const upd=async()=>{try{const x=g(),q=await api(`quote?a=${encodeURIComponent(x.a)}&b=${encodeURIComponent(x.b)}&kg=${x.kg}&service=${x.service}`);
+    $('#pr').textContent=money(q.price);$('#km').textContent=q.km+' km'}catch(e){$('#pr').textContent='–';$('#km').textContent=e.message}};
+  ['a','b','kg'].forEach(i=>$('#'+i).oninput=upd);document.querySelectorAll('[name=sv]').forEach(r=>r.onchange=upd);upd();
+  $('#book').onclick=run(async()=>{await api('orders','POST',{...g(),details:$('#d').value});toast('Pickup booked!');load()});
+  const load=async()=>{const o=await api('orders');$('#ords').innerHTML=o.length?`<table><tr><th>#</th><th>Route</th><th>Kg</th><th>Service</th><th>Price</th><th>Status</th></tr>${o.map(r=>`<tr><td>${r.id}</td><td>${esc(r.a)} → ${esc(r.b)}</td><td>${r.kg}</td><td>${r.service}</td><td>${money(r.price)}</td><td><span class="pill">${esc(r.status)}</span></td></tr>`).join('')}</table>`:'<p class="mute">No orders yet.</p>'};load()}
+
+function adminView(){
+  show(`<div class="tabs">${[['pricing','Prices & settings'],['routes','Routes & distance'],['orders','Orders'],['users','Users']].map(([k,l])=>`<button data-t="${k}" class="${k===tab?'on':''}">${l}</button>`).join('')}</div><div id="pane" class="card view"></div>`);
+  document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;adminView()});
+  const P=$('#pane');
+  if(tab==='pricing'){const s=cfg.settings,F=[['company','Company name'],['currency','Currency symbol'],['base','Base fee'],['perKm','Price per km'],['perKg','Price per kg'],['expressMult','Express multiplier (e.g. 1.6)'],['localKm','Distance for same-city parcels (km)'],['minPrice','Minimum price']];
+    P.innerHTML=`<h2>Prices &amp; settings</h2><div class="grid">${F.map(([k,l])=>`<div><label>${l}</label><input data-k="${k}" value="${esc(s[k])}"></div>`).join('')}</div><p><button id="sv">Save changes</button></p>
+    <p class="mute">Price = (base + km × per km + kg × per kg) × express multiplier, never below the minimum.</p>`;
+    $('#sv').onclick=run(async()=>{const b={};P.querySelectorAll('[data-k]').forEach(i=>b[i.dataset.k]=i.value);await api('admin/settings','PUT',b);cfg=await api('config');toast('Saved');boot()})}
+  if(tab==='routes')(run(async()=>{const r=await api('admin/routes');
+    P.innerHTML=`<h2>Routes &amp; distance</h2><div class="row"><div><label>City A</label><input id="ra"></div><div><label>City B</label><input id="rb"></div><div><label>Distance (km)</label><input id="rk" type="number"></div><button id="ad" style="flex:0 0 auto">Add / update</button></div>
+    <div class="scroll"><table><tr><th>From</th><th>To</th><th>km</th><th></th></tr>${r.map(x=>`<tr><td>${esc(x.a)}</td><td>${esc(x.b)}</td><td>${x.km}</td><td><button class="danger" data-d="${x.id}">Delete</button></td></tr>`).join('')}</table></div>`;
+    $('#ad').onclick=run(async()=>{await api('admin/routes','POST',{a:$('#ra').value,b:$('#rb').value,km:+$('#rk').value});cfg=await api('config');adminView()});
+    P.querySelectorAll('[data-d]').forEach(b=>b.onclick=run(async()=>{await api('admin/routes/'+b.dataset.d,'DELETE');cfg=await api('config');adminView()}))}))();
+  if(tab==='orders')(run(async()=>{const o=await api('admin/orders');
+    P.innerHTML=`<h2>Orders</h2><div class="scroll">${o.length?`<table><tr><th>#</th><th>Customer</th><th>Route</th><th>Kg</th><th>Price</th><th>Details</th><th>Status</th><th></th></tr>${o.map(r=>`<tr><td>${r.id}</td><td>${esc(r.customer)}<div class="mute">${esc(r.email)}</div></td><td>${esc(r.a)} → ${esc(r.b)}<div class="mute">${r.service}</div></td><td>${r.kg}</td><td>${money(r.price)}</td><td>${esc(r.details)}</td>
+    <td><select data-o="${r.id}">${STATUS.map(s=>`<option ${s===r.status?'selected':''}>${s}</option>`).join('')}</select></td><td><button class="danger" data-x="${r.id}">Delete</button></td></tr>`).join('')}</table>`:'<p class="mute">No orders yet.</p>'}</div>`;
+    P.querySelectorAll('[data-o]').forEach(s=>s.onchange=run(async()=>{await api('admin/orders/'+s.dataset.o,'PUT',{status:s.value});toast('Status updated')}));
+    P.querySelectorAll('[data-x]').forEach(b=>b.onclick=run(async()=>{if(confirm('Delete this order?')){await api('admin/orders/'+b.dataset.x,'DELETE');adminView()}}))}))();
+  if(tab==='users')(run(async()=>{const u=await api('admin/users');
+    P.innerHTML=`<h2>Users</h2><div class="scroll"><table><tr><th>Name</th><th>Email</th><th>Role</th><th></th></tr>${u.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.email)}</td>
+    <td><select data-r="${x.id}"${x.id===me.id?' disabled':''}><option ${x.role==='user'?'selected':''}>user</option><option ${x.role==='admin'?'selected':''}>admin</option></select></td>
+    <td>${x.id===me.id?'':`<button class="danger" data-u="${x.id}">Delete</button>`}</td></tr>`).join('')}</table></div>`;
+    P.querySelectorAll('[data-r]').forEach(s=>s.onchange=run(async()=>{await api('admin/users/'+s.dataset.r,'PUT',{role:s.value});toast('Role updated')}));
+    P.querySelectorAll('[data-u]').forEach(b=>b.onclick=run(async()=>{if(confirm('Delete this user?')){await api('admin/users/'+b.dataset.u,'DELETE');adminView()}}))}))();
+}
+boot();
+</script></body></html>
