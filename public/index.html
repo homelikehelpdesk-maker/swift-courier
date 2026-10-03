@@ -64,6 +64,7 @@ footer{background:var(--ink);color:#8d9bb3;text-align:center;padding:26px 16px;f
 table{width:100%;border-collapse:collapse;font-size:.92rem}th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--mute)}.scroll{overflow-x:auto}
 #toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,90px);background:var(--ink);color:#fff;padding:12px 20px;border-radius:12px;transition:transform .3s;z-index:9;max-width:90%}
 #toast.show{transform:translate(-50%,0)}#toast.bad{background:var(--bad)}.center{max-width:400px;margin:30px auto}
+#map2{height:340px;border-radius:12px;margin-top:10px}
 .mo{position:fixed;inset:0;background:rgba(15,27,45,.6);display:grid;place-items:center;z-index:20;padding:12px}
 .mb{background:#fff;border-radius:16px;padding:16px;width:min(620px,100%);max-height:94vh;overflow:auto}#map{height:320px;border-radius:12px;margin:10px 0}
 .inv{max-width:760px;margin:0 auto}.inv h1{margin:0;font-size:1.6rem}.inv .tot td{font-weight:800;font-size:1.1rem}.r{text-align:right}
@@ -94,12 +95,13 @@ async function boot(){cfg=await api('config');const c=cfg.cities;bk.a=bk.a||c[0]
   $('#brand').onclick=()=>go('#/');await refresh();render()}
 async function refresh(){try{me=await api('me')}catch{me=null}
   const L=(h,t)=>`<a href="${h}">${t}</a>`;
-  $('#nav').innerHTML=L('#/','Home')+L('#/track','Track')+(me?L('#/book','Book')+L('#/orders','My orders')+(me.role==='admin'?L('#/admin','Admin'):'')+'<a href="#" id="out">Log out</a>':L('#/login','Log in')+L('#/signup','Sign up'));
+  $('#nav').innerHTML=L('#/','Home')+L('#/track','Track')+(me?L('#/book','Book')+L('#/orders','My orders')+(me.role==='admin'?L('#/admin','Admin'):'')+(me.role==='driver'?L('#/driver','Driver panel'):'')+'<a href="#" id="out">Log out</a>':L('#/login','Log in')+L('#/signup','Sign up'));
   if(me)$('#out').onclick=run(async e=>{e.preventDefault();await api('logout','POST');me=null;await refresh();go('#/')})}
-function render(){const [p,arg]=location.hash.slice(2).split('/');
-  if(['book','orders','invoice'].includes(p)&&!me){after='#/'+p;return go('#/login')}
-  if(p==='admin'&&me?.role!=='admin')return go('#/');
-  ({'':home,login:()=>authView(0),signup:()=>authView(1),track:()=>trackView(arg),invoice:()=>invoiceView(arg),book:bookView,orders:ordersView,admin:adminView}[p]||home)();scrollTo(0,0)}
+let pollT,watchId=null,lastSent=0;
+function render(){clearInterval(pollT);const [p,arg]=location.hash.slice(2).split('/');
+  if(['book','orders','invoice','driver'].includes(p)&&!me){after='#/'+p;return go('#/login')}
+  if(p==='admin'&&me?.role!=='admin')return go('#/');if(p==='driver'&&me?.role!=='driver')return go('#/');
+  ({'':home,login:()=>authView(0),signup:()=>authView(1),track:()=>trackView(arg),invoice:()=>invoiceView(arg),driver:driverView,book:bookView,orders:ordersView,admin:adminView}[p]||home)();scrollTo(0,0)}
 addEventListener('hashchange',render);
 
 /* helpers for forms bound to bk */
@@ -134,11 +136,11 @@ function home(){const s=cfg.settings,c=cfg.cities;
   const B=()=>go('#/book');['h1','h3','h4'].forEach(i=>$('#'+i).onclick=B);$('#h2').onclick=()=>go('#/track');
   const q=()=>price($('#hq'));bind(q);q()}
 
-function authView(reg){show(`<div class="wrap"><div class="card center"><h2>${reg?'Create your account':'Welcome back'}</h2>${reg?'<label>Name</label><input id="n">':''}
+function authView(reg){show(`<div class="wrap"><div class="card center"><h2>${reg?'Create your account':'Welcome back'}</h2>${reg?'<label>Name</label><input id="n"><label>Phone</label><input id="ph" type="tel">':''}
   <label>Email</label><input id="e" type="email"><label>Password</label><input id="p" type="password" placeholder="At least 8 characters">
   <p><button id="go" style="width:100%">${reg?'Sign up':'Log in'}</button></p><p class="mute" style="text-align:center">${reg?'Have an account?':'New here?'} <a href="#/${reg?'login':'signup'}">${reg?'Log in':'Create an account'}</a></p></div></div>`);
-  $('#go').onclick=run(async()=>{await api(reg?'register':'login','POST',{name:reg&&$('#n').value,email:$('#e').value,password:$('#p').value});
-    await refresh();const t=after||(me.role==='admin'?'#/admin':'#/book');after=null;go(t)})}
+  $('#go').onclick=run(async()=>{await api(reg?'register':'login','POST',{name:reg&&$('#n').value,phone:reg&&$('#ph').value,email:$('#e').value,password:$('#p').value});
+    await refresh();const t=after||(me.role==='admin'?'#/admin':me.role==='driver'?'#/driver':'#/book');after=null;go(t)})}
 
 /* booking wizard */
 function bookView(){const c=cfg.cities;if(!bk.s_name)bk.s_name=me.name;
@@ -170,7 +172,7 @@ function bookView(){const c=cfg.cities;if(!bk.s_name)bk.s_name=me.name;
 async function ordersView(){show('<div class="wrap"><h2>My orders</h2><div id="ol"></div></div>');
   run(async()=>{const o=await api('orders');
     $('#ol').innerHTML=o.length?o.map(r=>`<div class="card ord"><div><b>${esc(r.tracking)}</b> <span class="pill ${esc(r.status)}">${esc(r.status)}</span>
-     <div class="mute">${esc(r.a)} to ${esc(r.b)}, ${r.kg} kg, ${r.service}${r.pickup_date?'. Pickup '+esc(r.pickup_date)+', '+esc(r.pickup_slot):''}</div></div>
+     <div class="mute">${esc(r.a)} to ${esc(r.b)}, ${r.kg} kg, ${r.service}${r.pickup_date?'. Pickup '+esc(r.pickup_date)+', '+esc(r.pickup_slot):''}</div>${r.driver_name?`<div class="mute">Delivery partner: <b>${esc(r.driver_name)}</b>${r.driver_phone?` <a href="tel:${esc(r.driver_phone)}">${esc(r.driver_phone)}</a>`:''}</div>`:''}</div>
      <div class="oact"><b>${money(r.price)}</b><button class="ghost" data-t="${esc(r.tracking)}">Track</button><button class="ghost" data-i="${r.id}">Invoice</button>${r.status==='Placed'?`<button class="danger" data-c="${r.id}">Cancel</button>`:''}</div></div>`).join('')
      :'<div class="card">No orders yet. <a href="#/book">Book your first pickup</a></div>';
     $$('[data-t]').forEach(b=>b.onclick=()=>go('#/track/'+b.dataset.t));$$('[data-i]').forEach(b=>b.onclick=()=>go('#/invoice/'+b.dataset.i));
@@ -178,9 +180,41 @@ async function ordersView(){show('<div class="wrap"><h2>My orders</h2><div id="o
 
 function trackView(id){show(`<div class="wrap"><h2>Track your parcel</h2><div class="card row"><div><label>Tracking ID</label><input id="tid" value="${esc(id||'')}" placeholder="e.g. SR1A2B3C4D"></div><button id="tg" style="flex:0 0 auto">Track</button></div><div id="tr"></div></div>`);
   const t=()=>{const v=$('#tid').value.trim();if(!v)return toast('Type a tracking ID first',1);go('#/track/'+encodeURIComponent(v))};$('#tg').onclick=t;$('#tid').onkeydown=e=>{if(e.key==='Enter')t()};
-  if(id)run(async()=>{let d;try{d=await api('track/'+encodeURIComponent(id))}catch(e){return $('#tr').innerHTML=`<div class="card"><b>Parcel not found</b><div class="mute">${esc(e.message)}. Check the ID for typos. Orders made before the database change no longer exist. You can copy a current ID from My orders.</div></div>`}
-    $('#tr').innerHTML=`<div class="card"><b>${esc(d.tracking)}</b> <span class="pill ${esc(d.status)}">${esc(d.status)}</span><div class="mute">${esc(d.a)} to ${esc(d.b)}, ${esc(d.parcel||'Parcel')}, ${d.service}</div>
-     <ol class="tl">${d.events.slice().reverse().map(e=>`<li><b>${esc(e.status)}</b><span class="mute">${fmt(e.at)}</span></li>`).join('')}</ol></div>`})()}
+  if(!id)return;let map,dm,hm;
+  const upd=run(async()=>{let d;try{d=await api('track/'+encodeURIComponent(id))}catch(e){clearInterval(pollT);return $('#tr').innerHTML=`<div class="card"><b>Parcel not found</b><div class="mute">${esc(e.message)}. Check the ID for typos. You can copy it from My orders.</div></div>`}
+    if(!$('#sum'))$('#tr').innerHTML='<div class="card" id="sum"></div><div class="card" id="live" hidden><div id="lt"></div><div id="map2" hidden></div></div>';
+    const dr=d.driver,fin=['Delivered','Cancelled'].includes(d.status);if(fin)clearInterval(pollT);
+    $('#sum').innerHTML=`<b>${esc(d.tracking)}</b> <span class="pill ${esc(d.status)}">${esc(d.status)}</span><div class="mute">${esc(d.a)} to ${esc(d.b)}, ${esc(d.parcel||'Parcel')}, ${d.service}</div>${!dr&&!fin?'<div class="mute">A delivery partner will be assigned soon.</div>':''}
+     <ol class="tl">${d.events.slice().reverse().map(e=>`<li><b>${esc(e.status)}</b><span class="mute">${fmt(e.at)}</span></li>`).join('')}</ol>`;
+    $('#live').hidden=!dr;if(!dr)return;
+    const ago=dr.updated?Math.max(0,Math.round((Date.now()-new Date(dr.updated.replace(' ','T')+'Z'))/1000)):0;
+    $('#lt').innerHTML=`<b>Delivery partner: ${esc(dr.name)}</b>${dr.phone?` <a href="tel:${esc(dr.phone)}">Call ${esc(dr.phone)}</a>`:''}<div class="mute">${dr.live?(ago<120?'Live location, updated '+ago+'s ago':'Last seen '+Math.round(ago/60)+' min ago'):(d.status==='Delivered'?'Parcel delivered.':'Live location appears once the parcel is picked up.')}</div>`;
+    $('#map2').hidden=!dr.live;if(!dr.live)return;
+    await loadLeaflet();const pos=[dr.lat,dr.lng];
+    if(!map){map=L.map('map2').setView(pos,15);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap contributors',maxZoom:19}).addTo(map);
+      dm=L.circleMarker(pos,{radius:11,color:'#ff6b2c',fillOpacity:.9}).addTo(map).bindTooltip('Delivery partner');setTimeout(()=>map.invalidateSize(),60)}
+    dm.setLatLng(pos);
+    if(d.dest&&!hm){hm=L.circleMarker(d.dest,{radius:9,color:'#0f1b2d',fillOpacity:.9}).addTo(map).bindTooltip('Delivery address')}
+    map.panTo(pos)});
+  upd();pollT=setInterval(()=>{if(!document.hidden)upd()},8000)}
+
+const gmap=(r,p)=>r[p+'_lat']?`https://www.google.com/maps/dir/?api=1&destination=${r[p+'_lat']},${r[p+'_lng']}`:`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(r[p+'_addr'])}`;
+function driverView(){show(`<div class="wrap"><h2>Delivery partner panel</h2><div class="card"><div class="row"><div><b>Share my live location</b><div class="mute" id="shs">Customers see your position only while a parcel assigned to you is picked up or in transit. Keep this page open with the screen on.</div></div><button id="shb" style="flex:0 0 auto">${watchId!==null?'Stop sharing':'Start sharing'}</button></div></div><div id="dl">Loading...</div></div>`);
+  $('#shb').onclick=()=>{
+    if(watchId!==null){navigator.geolocation.clearWatch(watchId);watchId=null;$('#shb').textContent='Start sharing';$('#shs').textContent='Sharing stopped.';return}
+    if(!navigator.geolocation)return toast('Location is not supported on this device',1);
+    watchId=navigator.geolocation.watchPosition(p=>{if(Date.now()-lastSent<8000)return;lastSent=Date.now();
+      api('driver/location','POST',{lat:p.coords.latitude,lng:p.coords.longitude}).then(()=>{const e=$('#shs');if(e)e.textContent='Sharing live. Last sent '+new Date().toLocaleTimeString()}).catch(()=>{})},
+      ()=>{toast('Location permission denied',1);navigator.geolocation.clearWatch(watchId);watchId=null;const b=$('#shb');if(b)b.textContent='Start sharing'},{enableHighAccuracy:true,maximumAge:5000});
+    $('#shb').textContent='Stop sharing'};
+  const next={Placed:['Picked up'],'Picked up':['In transit'],'In transit':['Delivered']};
+  const load=run(async()=>{const o=await api('driver/orders');
+    $('#dl').innerHTML=o.length?o.map(r=>`<div class="card"><div class="ord"><div><b>${esc(r.tracking)}</b> <span class="pill ${esc(r.status)}">${esc(r.status)}</span><div class="mute">${esc(r.a)} to ${esc(r.b)}, ${r.kg} kg, ${esc(r.parcel||'')}. Pickup ${esc(r.pickup_date)}, ${esc(r.pickup_slot)}</div></div><b>Collect ${money(r.price)}</b></div>
+      <div class="grid" style="margin-top:10px"><div><div class="mute">Pickup</div>${esc(r.s_name)} <a href="tel:${esc(r.s_phone)}">${esc(r.s_phone)}</a><br>${esc(r.s_addr)}<br><a target="_blank" rel="noopener" href="${gmap(r,'s')}">Navigate</a></div>
+      <div><div class="mute">Delivery</div>${esc(r.r_name)} <a href="tel:${esc(r.r_phone)}">${esc(r.r_phone)}</a><br>${esc(r.r_addr)}<br><a target="_blank" rel="noopener" href="${gmap(r,'r')}">Navigate</a></div></div>
+      <div class="row" style="margin-top:12px">${(next[r.status]||[]).map(s=>`<button data-o="${r.id}" data-s="${s}">Mark ${s}</button>`).join('')}</div></div>`).join(''):'<div class="card">No active deliveries assigned to you right now.</div>';
+    $$('[data-s]').forEach(b=>b.onclick=run(async()=>{await api('driver/orders/'+b.dataset.o,'PUT',{status:b.dataset.s});toast('Updated');load()}))});
+  load();pollT=setInterval(load,20000)}
 
 /* admin */
 function adminView(){show(`<div class="wrap"><div class="tabs">${[['pricing','Prices and settings'],['routes','Routes and distance'],['orders','Orders'],['users','Users']].map(([k,l])=>`<button data-t="${k}" class="${k===tab?'on':''}">${l}</button>`).join('')}</div><div id="pane" class="card"></div></div>`);
@@ -193,14 +227,16 @@ function adminView(){show(`<div class="wrap"><div class="tabs">${[['pricing','Pr
     <div class="scroll"><table><tr><th>From</th><th>To</th><th>km</th><th></th></tr>${r.map(x=>`<tr><td>${esc(x.a)}</td><td>${esc(x.b)}</td><td>${x.km}</td><td><button class="danger" data-d="${x.id}">Delete</button></td></tr>`).join('')}</table></div>`;
     $('#ad').onclick=run(async()=>{await api('admin/routes','POST',{a:$('#ra').value,b:$('#rb').value,km:+$('#rk').value});await re()});
     $$('[data-d]').forEach(b=>b.onclick=run(async()=>{await api('admin/routes/'+b.dataset.d,'DELETE');await re()}))})();
-  if(tab==='orders')run(async()=>{const o=await api('admin/orders');
-    P.innerHTML=`<h2>Orders</h2><div class="scroll">${o.length?`<table><tr><th>Tracking</th><th>Customer</th><th>Route</th><th>Price</th><th>Details</th><th>Status</th><th></th></tr>${o.map(r=>`<tr><td><b>${esc(r.tracking)}</b><div class="mute">#${r.id}</div></td><td>${esc(r.customer)}<div class="mute">${esc(r.email)}</div></td><td>${esc(r.a)} to ${esc(r.b)}<div class="mute">${r.kg} kg, ${r.service}, ${esc(r.parcel||'')}</div></td><td>${money(r.price)}<div class="mute">cash on delivery</div></td>
+  if(tab==='orders')run(async()=>{const [o,dv]=await Promise.all([api('admin/orders'),api('admin/drivers')]);
+    P.innerHTML=`<h2>Orders</h2><div class="scroll">${o.length?`<table><tr><th>Tracking</th><th>Customer</th><th>Route</th><th>Price</th><th>Details</th><th>Delivery partner</th><th>Status</th><th></th></tr>${o.map(r=>`<tr><td><b>${esc(r.tracking)}</b><div class="mute">#${r.id}</div></td><td>${esc(r.customer)}<div class="mute">${esc(r.email)}</div></td><td>${esc(r.a)} to ${esc(r.b)}<div class="mute">${r.kg} kg, ${r.service}, ${esc(r.parcel||'')}</div></td><td>${money(r.price)}<div class="mute">cash on delivery</div></td>
     <td><details style="padding:0;background:none"><summary>View</summary><div class="mute">Pickup ${esc(r.pickup_date||'')}, ${esc(r.pickup_slot||'')}<br><b>From:</b> ${esc(r.s_name)} ${esc(r.s_phone)}, ${esc(r.s_addr)}<br><b>To:</b> ${esc(r.r_name)} ${esc(r.r_phone)}, ${esc(r.r_addr)}<br>${r.value?'Insured value '+money(r.value)+'<br>':''}${esc(r.details||'')}<br>${r.s_lat?`<a href="https://www.openstreetmap.org/?mlat=${r.s_lat}&mlon=${r.s_lng}#map=16/${r.s_lat}/${r.s_lng}" target="_blank" rel="noopener">Pickup map</a> `:''}${r.r_lat?`<a href="https://www.openstreetmap.org/?mlat=${r.r_lat}&mlon=${r.r_lng}#map=16/${r.r_lat}/${r.r_lng}" target="_blank" rel="noopener">Delivery map</a> `:''}<a href="#/invoice/${r.id}">Invoice</a></div></details></td>
+    <td><select data-dv="${r.id}"><option value="">Unassigned</option>${dv.map(d=>`<option value="${d.id}" ${d.id===r.driver_id?'selected':''}>${esc(d.name)}</option>`).join('')}</select></td>
     <td><select data-o="${r.id}">${STATUS.map(s=>`<option ${s===r.status?'selected':''}>${s}</option>`).join('')}</select></td><td><button class="danger" data-x="${r.id}">Delete</button></td></tr>`).join('')}</table>`:'<p class="mute">No orders yet.</p>'}</div>`;
     $$('[data-o]').forEach(s=>s.onchange=run(async()=>{await api('admin/orders/'+s.dataset.o,'PUT',{status:s.value});toast('Status updated')}));
+    $$('[data-dv]').forEach(s=>s.onchange=run(async()=>{await api(`admin/orders/${s.dataset.dv}/driver`,'PUT',{driver_id:s.value||null});toast('Delivery partner updated')}));
     $$('[data-x]').forEach(b=>b.onclick=run(async()=>{if(confirm('Delete this order?')){await api('admin/orders/'+b.dataset.x,'DELETE');adminView()}}))})();
   if(tab==='users')run(async()=>{const u=await api('admin/users');
-    P.innerHTML=`<h2>Users</h2><div class="scroll"><table><tr><th>Name</th><th>Email</th><th>Role</th><th></th></tr>${u.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.email)}</td><td><select data-r="${x.id}"${x.id===me.id?' disabled':''}><option ${x.role==='user'?'selected':''}>user</option><option ${x.role==='admin'?'selected':''}>admin</option></select></td><td>${x.id===me.id?'':`<button class="danger" data-u="${x.id}">Delete</button>`}</td></tr>`).join('')}</table></div>`;
+    P.innerHTML=`<h2>Users</h2><div class="scroll"><table><tr><th>Name</th><th>Email</th><th>Role</th><th></th></tr>${u.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.email)}</td><td><select data-r="${x.id}"${x.id===me.id?' disabled':''}><option ${x.role==='user'?'selected':''}>user</option><option ${x.role==='admin'?'selected':''}>admin</option><option ${x.role==='driver'?'selected':''}>driver</option></select></td><td>${x.id===me.id?'':`<button class="danger" data-u="${x.id}">Delete</button>`}</td></tr>`).join('')}</table></div>`;
     $$('[data-r]').forEach(s=>s.onchange=run(async()=>{await api('admin/users/'+s.dataset.r,'PUT',{role:s.value});toast('Role updated')}));
     $$('[data-u]').forEach(b=>b.onclick=run(async()=>{if(confirm('Delete this user?')){await api('admin/users/'+b.dataset.u,'DELETE');adminView()}}))})()}
 let LL;const loadLeaflet=()=>LL||(LL=new Promise((ok,no)=>{const l=document.createElement('link');l.rel='stylesheet';l.href='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';document.head.append(l);

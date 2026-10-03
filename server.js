@@ -24,6 +24,8 @@ async function init() {
     insurance DOUBLE PRECISION DEFAULT 0, pickup_date TEXT, pickup_slot TEXT, s_name TEXT, s_phone TEXT, s_addr TEXT, r_name TEXT, r_phone TEXT,
     r_addr TEXT, pay TEXT, s_lat DOUBLE PRECISION, s_lng DOUBLE PRECISION, r_lat DOUBLE PRECISION, r_lng DOUBLE PRECISION);
   CREATE TABLE IF NOT EXISTS events(id SERIAL PRIMARY KEY, order_id INTEGER, status TEXT, at TEXT DEFAULT ${NOW});`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT; ALTER TABLE orders ADD COLUMN IF NOT EXISTS driver_id INTEGER;
+  CREATE TABLE IF NOT EXISTS driver_loc(driver_id INTEGER PRIMARY KEY, lat DOUBLE PRECISION, lng DOUBLE PRECISION, at TEXT DEFAULT ${NOW});`);
   for (const [k, v] of Object.entries(DEFAULTS)) await q('INSERT INTO settings(k,v) VALUES($1,$2) ON CONFLICT (k) DO NOTHING', [k, String(v)]);
   if (!(await one('SELECT 1 FROM routes')))
     for (const r of [['Delhi', 'Jaipur', 281], ['Delhi', 'Chandigarh', 250], ['Delhi', 'Mumbai', 1400], ['Mumbai', 'Pune', 150]])
@@ -79,8 +81,11 @@ const app = express();
 app.use(express.json(), cookie(), express.static(path.join(__dirname, 'public')));
 const wrap = f => (req, res) => Promise.resolve().then(() => f(req, res)).catch(e => res.status(400).json({ error: e.message }));
 const fail = m => { throw new Error(m); };
-function auth(req, res, next) {
-  try { req.user = jwt.verify(req.cookies.t, SECRET); next(); } catch { res.status(401).json({ error: 'Please log in' }); }
+async function auth(req, res, next) {
+  try {
+    const t = jwt.verify(req.cookies.t, SECRET), u = await one('SELECT id,name,role FROM users WHERE id=$1', [t.id]);
+    if (!u) throw 0; req.user = u; next();
+  } catch { res.status(401).json({ error: 'Please log in' }); }
 }
 const admin = (req, res, next) => req.user.role === 'admin' ? next() : res.status(403).json({ error: 'Admins only' });
 const A = [auth, admin];
@@ -94,7 +99,7 @@ app.post('/api/register', wrap(async (req, res) => {
   const { name, email, password } = req.body;
   if (!name || !email || !password || password.length < 8) fail('Enter name, email and a password of 8+ characters');
   if (await one('SELECT 1 FROM users WHERE email=$1', [email.toLowerCase()])) fail('Email already registered');
-  const u = await one('INSERT INTO users(name,email,hash) VALUES($1,$2,$3) RETURNING id', [name, email.toLowerCase(), bcrypt.hashSync(password, 10)]);
+  const u = await one('INSERT INTO users(name,email,hash,phone) VALUES($1,$2,$3,$4) RETURNING id', [name, email.toLowerCase(), bcrypt.hashSync(password, 10), String(req.body.phone || '').slice(0, 20)]);
   login(res, { id: u.id, name, role: 'user' });
 }));
 app.post('/api/login', wrap(async (req, res) => {
@@ -110,7 +115,7 @@ app.get('/api/quote', wrap(async (req, res) => {
   r ? res.json(r) : fail('No route set up for these cities yet');
 }));
 
-app.get('/api/orders', auth, wrap(async (req, res) => res.json(await q('SELECT * FROM orders WHERE user_id=$1 ORDER BY id DESC', [req.user.id]))));
+app.get('/api/orders', auth, wrap(async (req, res) => res.json(await q('SELECT o.*, d.name AS driver_name, d.phone AS driver_phone FROM orders o LEFT JOIN users d ON d.id=o.driver_id WHERE o.user_id=$1 ORDER BY o.id DESC', [req.user.id]))));
 app.get('/api/orders/:id', auth, wrap(async (req, res) => {
   const o = await one('SELECT o.*, u.name AS customer, u.email FROM orders o LEFT JOIN users u ON u.id=o.user_id WHERE o.id=$1', [req.params.id]);
   if (!o || (o.user_id !== req.user.id && req.user.role !== 'admin')) fail('Order not found');
@@ -138,10 +143,20 @@ app.post('/api/orders/:id/cancel', auth, wrap(async (req, res) => {
   await q('INSERT INTO events(order_id,status) VALUES($1,$2)', [req.params.id, 'Cancelled']);
   notify(req.params.id, 'Cancelled'); res.json({ ok: 1 });
 }));
+const who = req => { try { return jwt.verify(req.cookies.t, SECRET); } catch { return null; } };
 app.get('/api/track/:t', wrap(async (req, res) => {
-  const o = await one('SELECT id,tracking,a,b,service,status,parcel,created FROM orders WHERE tracking=$1', [req.params.t.trim().toUpperCase()]);
+  const o = await one('SELECT id,user_id,tracking,a,b,service,status,parcel,created,driver_id,r_lat,r_lng FROM orders WHERE tracking=$1', [req.params.t.trim().toUpperCase()]);
   if (!o) fail('No parcel found with that tracking ID');
-  res.json({ ...o, events: await q('SELECT status,at FROM events WHERE order_id=$1 ORDER BY id', [o.id]) });
+  const me = who(req), mine = !!me && (me.id === o.user_id || me.role === 'admin');
+  let driver = null;
+  if (o.driver_id) {
+    const d = await one('SELECT u.name, u.phone, l.lat, l.lng, l.at FROM users u LEFT JOIN driver_loc l ON l.driver_id=u.id WHERE u.id=$1', [o.driver_id]);
+    const live = !!d && d.lat != null && ['Picked up', 'In transit'].includes(o.status);
+    if (d) driver = { name: d.name, phone: mine ? d.phone : null, live, lat: live ? d.lat : null, lng: live ? d.lng : null, updated: live ? d.at : null };
+  }
+  const { user_id, driver_id, r_lat, r_lng, ...pub } = o;
+  res.json({ ...pub, driver, dest: mine && r_lat != null ? [r_lat, r_lng] : null,
+    events: await q('SELECT status,at FROM events WHERE order_id=$1 ORDER BY id', [o.id]) });
 }));
 
 app.put('/api/admin/settings', A, wrap(async (req, res) => {
@@ -157,7 +172,7 @@ app.post('/api/admin/routes', A, wrap(async (req, res) => {
 }));
 app.delete('/api/admin/routes/:id', A, wrap(async (req, res) => { await q('DELETE FROM routes WHERE id=$1', [req.params.id]); res.json({ ok: 1 }); }));
 app.get('/api/admin/orders', A, wrap(async (req, res) => res.json(await q(
-  'SELECT o.*, u.name AS customer, u.email FROM orders o LEFT JOIN users u ON u.id=o.user_id ORDER BY o.id DESC'))));
+  'SELECT o.*, u.name AS customer, u.email, d.name AS driver_name FROM orders o LEFT JOIN users u ON u.id=o.user_id LEFT JOIN users d ON d.id=o.driver_id ORDER BY o.id DESC'))));
 app.put('/api/admin/orders/:id', A, wrap(async (req, res) => {
   if (!STATUS.includes(req.body.status)) fail('Unknown status');
   await q('UPDATE orders SET status=$1 WHERE id=$2', [req.body.status, req.params.id]);
@@ -168,11 +183,37 @@ app.delete('/api/admin/orders/:id', A, wrap(async (req, res) => { await q('DELET
 app.get('/api/admin/users', A, wrap(async (req, res) => res.json(await q('SELECT id,name,email,role FROM users ORDER BY id'))));
 app.put('/api/admin/users/:id', A, wrap(async (req, res) => {
   if (+req.params.id === req.user.id) fail('You cannot change your own role');
-  await q('UPDATE users SET role=$1 WHERE id=$2', [req.body.role === 'admin' ? 'admin' : 'user', req.params.id]); res.json({ ok: 1 });
+  await q('UPDATE users SET role=$1 WHERE id=$2', [['admin', 'driver'].includes(req.body.role) ? req.body.role : 'user', req.params.id]); res.json({ ok: 1 });
 }));
 app.delete('/api/admin/users/:id', A, wrap(async (req, res) => {
   if (+req.params.id === req.user.id) fail('You cannot delete yourself');
   await q('DELETE FROM users WHERE id=$1', [req.params.id]); res.json({ ok: 1 });
+}));
+
+app.get('/api/admin/drivers', A, wrap(async (req, res) => res.json(await q("SELECT id,name,phone FROM users WHERE role='driver' ORDER BY name"))));
+app.put('/api/admin/orders/:id/driver', A, wrap(async (req, res) => {
+  const d = req.body.driver_id ? await one("SELECT id,name FROM users WHERE id=$1 AND role='driver'", [req.body.driver_id]) : null;
+  if (req.body.driver_id && !d) fail('Choose a valid delivery partner');
+  await q('UPDATE orders SET driver_id=$1 WHERE id=$2', [d ? d.id : null, req.params.id]);
+  if (d) await q('INSERT INTO events(order_id,status) VALUES($1,$2)', [req.params.id, 'Delivery partner assigned: ' + d.name]);
+  res.json({ ok: 1 });
+}));
+
+const drv = (req, res, next) => req.user.role === 'driver' ? next() : res.status(403).json({ error: 'Delivery partners only' });
+app.get('/api/driver/orders', auth, drv, wrap(async (req, res) => res.json(await q(
+  "SELECT o.*, u.name AS customer FROM orders o LEFT JOIN users u ON u.id=o.user_id WHERE o.driver_id=$1 AND o.status NOT IN ('Delivered','Cancelled') ORDER BY o.id", [req.user.id]))));
+app.put('/api/driver/orders/:id', auth, drv, wrap(async (req, res) => {
+  if (!['Picked up', 'In transit', 'Delivered'].includes(req.body.status)) fail('Unknown status');
+  const r = await pool.query("UPDATE orders SET status=$1 WHERE id=$2 AND driver_id=$3 AND status NOT IN ('Delivered','Cancelled')", [req.body.status, req.params.id, req.user.id]);
+  if (!r.rowCount) fail('This order is not available to you');
+  await q('INSERT INTO events(order_id,status) VALUES($1,$2)', [req.params.id, req.body.status]);
+  notify(req.params.id, req.body.status); res.json({ ok: 1 });
+}));
+app.post('/api/driver/location', auth, drv, wrap(async (req, res) => {
+  const lat = +req.body.lat, lng = +req.body.lng;
+  if (!(Math.abs(lat) <= 90 && Math.abs(lng) <= 180)) fail('Bad location');
+  await q(`INSERT INTO driver_loc(driver_id,lat,lng,at) VALUES($1,$2,$3,${NOW}) ON CONFLICT (driver_id) DO UPDATE SET lat=EXCLUDED.lat, lng=EXCLUDED.lng, at=EXCLUDED.at`, [req.user.id, lat, lng]);
+  res.json({ ok: 1 });
 }));
 
 const PORT = process.env.PORT || 3000;
