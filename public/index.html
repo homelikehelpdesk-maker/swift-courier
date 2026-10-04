@@ -108,8 +108,8 @@ addEventListener('hashchange',render);
 const sel=(f,o,l)=>`<div><label>${l}</label><select data-f="${f}">${o.map(x=>`<option ${x===bk[f]?'selected':''}>${esc(x)}</option>`).join('')}</select></div>`;
 const inp=(f,l,t='text',x='')=>`<div><label>${l}</label><input data-f="${f}" type="${t}" value="${esc(bk[f]??'')}" ${x}></div>`;
 function bind(cb){$$('[data-f]').forEach(i=>i.oninput=i.onchange=()=>{if(i.type==='radio'&&!i.checked)return;bk[i.dataset.f]=i.type==='checkbox'?i.checked:i.value;cb&&cb()})}
-const qs=()=>`quote?a=${encodeURIComponent(bk.a)}&b=${encodeURIComponent(bk.b)}&kg=${bk.kg}&service=${bk.service}&value=${bk.value||0}&insured=${bk.insured?1:0}`;
-async function price(el){try{const q=qres=await api(qs());el.innerHTML=`<div class="price">${money(q.price)}</div><div class="mute">${q.km} km. Shipping ${money(q.ship)}${q.insurance?', insurance '+money(q.insurance):''}</div>`}
+const qs=city=>`quote?a=${encodeURIComponent(bk.a)}&b=${encodeURIComponent(bk.b)}&kg=${bk.kg}&service=${bk.service}&value=${bk.value||0}&insured=${bk.insured?1:0}${!city&&bk.s_lat&&bk.r_lat?`&s_lat=${bk.s_lat}&s_lng=${bk.s_lng}&r_lat=${bk.r_lat}&r_lng=${bk.r_lng}`:''}`;
+async function price(el,city){try{const q=qres=await api(qs(city));el.innerHTML=`<div class="price">${money(q.price)}</div><div class="mute">${q.km} km (${{road:'road distance',straight:'approx. road distance',city:'city estimate'}[q.mode]}). Shipping ${money(q.ship)}${q.insurance?', insurance '+money(q.insurance):''}</div>`}
   catch(e){qres=null;el.innerHTML=`<div class="mute">${esc(e.message)}</div>`}}
 const seg=(f,o)=>`<div class="seg">${o.map(([v,l])=>`<label><input type="radio" name="${f}" data-f="${f}" value="${v}" ${bk[f]===v?'checked':''}> ${l}</label>`).join('')}</div>`;
 
@@ -119,7 +119,7 @@ function home(){const s=cfg.settings,c=cfg.cities;
   <p>Door-to-door courier service across ${c.length} cities. Clear prices, pickup from your doorstep and live tracking from booking to delivery.</p>
   <div class="cta"><button id="h1">Book a pickup</button><button class="ghost" id="h2">Track a parcel</button></div></div>
   <div class="card qcard"><h2 style="font-size:1.2rem">Get an instant price</h2><div class="grid">${sel('a',c,'From')}${sel('b',c,'To')}${inp('kg','Weight (kg)','number','min="0.1" step="0.1"')}</div>
-  <label>Service</label>${seg('service',[['standard','Standard'],['express','Express']])}<div id="hq" style="margin-top:12px"></div>
+  <label>Service</label>${seg('service',[['standard','Standard'],['express','Express']])}<div id="hq" style="margin-top:12px"></div><div class="mute">Estimate by city. The exact price uses your pickup and delivery pins when you book.</div>
   <button id="h3" style="width:100%;margin-top:8px">Book this parcel</button></div></div>
   <svg class="route" viewBox="0 0 1000 100" preserveAspectRatio="xMidYMax slice" aria-hidden="true"><path id="rp" d="M0 80 C200 5 360 110 520 55 S850 0 1000 45" fill="none" stroke="#ff6b2c" stroke-opacity=".55" stroke-width="3" stroke-dasharray="8 10"/><circle r="8" fill="#ff6b2c"><animateMotion dur="9s" repeatCount="indefinite"><mpath href="#rp"/></animateMotion></circle></svg></section>
   <section class="sec"><div class="wrap"><h2>How it works</h2><div class="steps4">${[['Get a price','Pick your cities and weight to see the cost instantly.'],['Book a pickup','Choose a date and time slot and add both addresses.'],['We collect','Our courier picks the parcel up from your door.'],['Track it','Follow every status update with your tracking ID.']].map(([t,d],i)=>`<div><b>${i+1}</b><h3 style="margin:0">${t}</h3><span class="mute">${d}</span></div>`).join('')}</div></div></section>
@@ -134,13 +134,18 @@ function home(){const s=cfg.settings,c=cfg.cities;
   <section class="band"><h2>Ready to send something?</h2><button id="h4">Book a pickup</button></section>
   <footer>${esc(s.company)}. All rights reserved.</footer>`);
   const B=()=>go('#/book');['h1','h3','h4'].forEach(i=>$('#'+i).onclick=B);$('#h2').onclick=()=>go('#/track');
-  const q=()=>price($('#hq'));bind(q);q()}
+  const q=()=>price($('#hq'),1);bind(q);q()}
 
 function authView(reg){show(`<div class="wrap"><div class="card center"><h2>${reg?'Create your account':'Welcome back'}</h2>${reg?'<label>Name</label><input id="n"><label>Phone</label><input id="ph" type="tel">':''}
   <label>Email</label><input id="e" type="email"><label>Password</label><input id="p" type="password" placeholder="At least 8 characters">
   <p><button id="go" style="width:100%">${reg?'Sign up':'Log in'}</button></p><p class="mute" style="text-align:center">${reg?'Have an account?':'New here?'} <a href="#/${reg?'login':'signup'}">${reg?'Log in':'Create an account'}</a></p></div></div>`);
-  $('#go').onclick=run(async()=>{await api(reg?'register':'login','POST',{name:reg&&$('#n').value,phone:reg&&$('#ph').value,email:$('#e').value,password:$('#p').value});
+  $('#go').onclick=run(async()=>{const r=await api(reg?'register':'login','POST',{name:reg&&$('#n').value,phone:reg&&$('#ph').value,email:$('#e').value,password:$('#p').value});if(r.verify)return verifyView(r.email);
     await refresh();const t=after||(me.role==='admin'?'#/admin':me.role==='driver'?'#/driver':'#/book');after=null;go(t)})}
+
+function verifyView(email){show(`<div class="wrap"><div class="card center"><h2>Check your email</h2><p class="mute">We sent a 6-digit code to ${esc(email)}. It expires in 10 minutes.</p><label>Verification code</label><input id="vc" inputmode="numeric" maxlength="6" autocomplete="one-time-code"><p><button id="vg" style="width:100%">Verify and continue</button></p><p class="mute" style="text-align:center"><a href="#" id="vr">Send a new code</a></p></div></div>`);
+  const ok=run(async()=>{await api('verify','POST',{email,code:$('#vc').value});await refresh();const t=after||(me.role==='admin'?'#/admin':me.role==='driver'?'#/driver':'#/book');after=null;go(t)});
+  $('#vg').onclick=ok;$('#vc').onkeydown=e=>{if(e.key==='Enter')ok()};
+  $('#vr').onclick=run(async e=>{e.preventDefault();await api('resend','POST',{email});toast('New code sent')})}
 
 /* booking wizard */
 function bookView(){const c=cfg.cities;if(!bk.s_name)bk.s_name=me.name;
@@ -150,29 +155,29 @@ function bookView(){const c=cfg.cities;if(!bk.s_name)bk.s_name=me.name;
    <label>Service</label>${seg('service',[['standard','Standard'],['express','Express (priority)']])}
    <div class="grid">${inp('value','Declared value (optional)','number','min="0"')}<div><label>Insurance</label><label class="chk"><input type="checkbox" data-f="insured" ${bk.insured?'checked':''}> Cover my parcel (${cfg.settings.insurancePct}% of value)</label></div></div>`;
   if(step===2)b=`<h3 style="margin:0">Pickup</h3><div class="grid">${inp('pickup_date','Pickup date','date',`min="${today()}"`)}${sel('pickup_slot',SLOTS,'Time slot')}</div>
-   <div class="grid">${inp('s_name','Sender name')}${inp('s_phone','Sender phone','tel')}</div><label>Pickup address <a href="#" data-m="s" style="color:var(--acc)">Pick on map</a></label><textarea data-f="s_addr" rows="2">${esc(bk.s_addr||'')}</textarea>
-   <h3 style="margin:18px 0 0">Delivery</h3><div class="grid">${inp('r_name','Receiver name')}${inp('r_phone','Receiver phone','tel')}</div><label>Delivery address <a href="#" data-m="r" style="color:var(--acc)">Pick on map</a></label><textarea data-f="r_addr" rows="2">${esc(bk.r_addr||'')}</textarea>
+   <div class="grid">${inp('s_name','Sender name')}${inp('s_phone','Sender phone','tel')}</div><label>Pickup address <a href="#" data-m="s" style="color:var(--acc)">${bk.s_lat?'Pinned (change)':'Pick on map (required)'}</a></label><textarea data-f="s_addr" rows="2">${esc(bk.s_addr||'')}</textarea>
+   <h3 style="margin:18px 0 0">Delivery</h3><div class="grid">${inp('r_name','Receiver name')}${inp('r_phone','Receiver phone','tel')}</div><label>Delivery address <a href="#" data-m="r" style="color:var(--acc)">${bk.r_lat?'Pinned (change)':'Pick on map (required)'}</a></label><textarea data-f="r_addr" rows="2">${esc(bk.r_addr||'')}</textarea>
    <label>Notes for the courier (optional)</label><textarea data-f="details" rows="2">${esc(bk.details||'')}</textarea>`;
   if(step===3){const R=[['Route',`${bk.a} to ${bk.b}`],['Parcel',`${bk.parcel}, ${bk.kg} kg, ${bk.service}`],['Pickup',`${bk.pickup_date}, ${bk.pickup_slot}`],['From',`${bk.s_name}, ${bk.s_phone}<br>${bk.s_addr}`],['To',`${bk.r_name}, ${bk.r_phone}<br>${bk.r_addr}`]];
    if(bk.insured)R.push(['Insured value',money(bk.value)]);
    b=`<table class="rv">${R.map(([k,v])=>`<tr><td>${k}</td><td>${esc(v).replace(/&lt;br&gt;/g,'<br>')}</td></tr>`).join('')}</table><p class="card" style="background:#fff4ee;margin:16px 0 0"><b>Payment: cash on delivery.</b> You pay the courier in cash when the parcel is delivered.</p>`}
   show(`<div class="wrap"><h2>Book a courier</h2><div class="steps">${head}</div><div class="bgrid"><div class="card">${b}<div class="row nav2">${step>1?'<button class="ghost" id="bb">Back</button>':'<span></span>'}<button id="nx">${step===3?'Confirm booking':'Continue'}</button></div></div>
-   <div class="card"><div class="mute">Estimated total</div><div id="pp"></div><p class="mute">Final price is confirmed by the server when you book.</p></div></div></div>`);
+   <div class="card"><div class="mute">${step===1?'Estimated total. The final price is set from your map pins in the next step.':'Your total, based on the distance between your pins'}</div><div id="pp"></div><p class="mute">Final price is confirmed by the server when you book.</p></div></div></div>`);
   const q=()=>price($('#pp'));bind(step===1?q:null);q();$$('[data-m]').forEach(a=>a.onclick=run(async e=>{e.preventDefault();await mapPick(a.dataset.m)}));
   if($('#bb'))$('#bb').onclick=()=>{step--;bookView()};
   $('#nx').onclick=run(async()=>{
     if(step===1){if(!qres)throw Error('We do not have a route for these cities yet');if(bk.insured&&!(+bk.value>0))throw Error('Enter the declared value to add insurance');step=2;return bookView()}
-    if(step===2){if(['s_name','s_phone','s_addr','r_name','r_phone','r_addr','pickup_date'].some(k=>!String(bk[k]||'').trim()))throw Error('Please fill in all pickup and delivery details');
+    if(step===2){if(!bk.s_lat||!bk.r_lat)throw Error('Please pin both the pickup and delivery locations on the map. The exact price is calculated from them.');if(['s_name','s_phone','s_addr','r_name','r_phone','r_addr','pickup_date'].some(k=>!String(bk[k]||'').trim()))throw Error('Please fill in all pickup and delivery details');
       if(![bk.s_phone,bk.r_phone].every(p=>p.replace(/\D/g,'').length>=10))throw Error('Enter valid phone numbers (10 digits)');step=3;return bookView()}
     const r=await api('orders','POST',bk);step=1;
-    show(`<div class="wrap"><div class="card ok"><h2>Booking confirmed!</h2><p class="mute">Your tracking ID</p><div class="tid">${r.tracking}</div><p>Total ${money(r.price)}, payable in cash on delivery.</p>
+    show(`<div class="wrap"><div class="card ok"><h2>Booking confirmed!</h2><p class="mute">Your tracking ID</p><div class="tid">${r.tracking}</div><p>Total ${money(r.price)}, payable in cash on delivery.</p><p>Delivery OTP: <b>${esc(r.otp)}</b>. Share it with the receiver. The courier will ask for it at delivery.</p>
      <div class="row" style="justify-content:center"><button id="t1" style="flex:0 0 auto">Track this parcel</button><button class="ghost" id="t3" style="flex:0 0 auto">View invoice</button><button class="ghost" id="t2" style="flex:0 0 auto">Book another</button></div></div></div>`);
     $('#t1').onclick=()=>go('#/track/'+r.tracking);$('#t2').onclick=()=>go('#/book');$('#t3').onclick=()=>go('#/invoice/'+r.id)})}
 
 async function ordersView(){show('<div class="wrap"><h2>My orders</h2><div id="ol"></div></div>');
   run(async()=>{const o=await api('orders');
     $('#ol').innerHTML=o.length?o.map(r=>`<div class="card ord"><div><b>${esc(r.tracking)}</b> <span class="pill ${esc(r.status)}">${esc(r.status)}</span>
-     <div class="mute">${esc(r.a)} to ${esc(r.b)}, ${r.kg} kg, ${r.service}${r.pickup_date?'. Pickup '+esc(r.pickup_date)+', '+esc(r.pickup_slot):''}</div>${r.driver_name?`<div class="mute">Delivery partner: <b>${esc(r.driver_name)}</b>${r.driver_phone?` <a href="tel:${esc(r.driver_phone)}">${esc(r.driver_phone)}</a>`:''}</div>`:''}</div>
+     <div class="mute">${esc(r.a)} to ${esc(r.b)}, ${r.kg} kg, ${r.service}${r.pickup_date?'. Pickup '+esc(r.pickup_date)+', '+esc(r.pickup_slot):''}</div>${r.driver_name?`<div class="mute">Delivery partner: <b>${esc(r.driver_name)}</b>${r.driver_phone?` <a href="tel:${esc(r.driver_phone)}">${esc(r.driver_phone)}</a>`:''}</div>`:''}${r.otp&&!['Delivered','Cancelled'].includes(r.status)?`<div class="mute">Delivery OTP: <b>${esc(r.otp)}</b>. Share it with the receiver. The courier will ask for it at delivery.</div>`:''}</div>
      <div class="oact"><b>${money(r.price)}</b><button class="ghost" data-t="${esc(r.tracking)}">Track</button><button class="ghost" data-i="${r.id}">Invoice</button>${r.status==='Placed'?`<button class="danger" data-c="${r.id}">Cancel</button>`:''}</div></div>`).join('')
      :'<div class="card">No orders yet. <a href="#/book">Book your first pickup</a></div>';
     $$('[data-t]').forEach(b=>b.onclick=()=>go('#/track/'+b.dataset.t));$$('[data-i]').forEach(b=>b.onclick=()=>go('#/invoice/'+b.dataset.i));
@@ -184,7 +189,7 @@ function trackView(id){show(`<div class="wrap"><h2>Track your parcel</h2><div cl
   const upd=run(async()=>{let d;try{d=await api('track/'+encodeURIComponent(id))}catch(e){clearInterval(pollT);return $('#tr').innerHTML=`<div class="card"><b>Parcel not found</b><div class="mute">${esc(e.message)}. Check the ID for typos. You can copy it from My orders.</div></div>`}
     if(!$('#sum'))$('#tr').innerHTML='<div class="card" id="sum"></div><div class="card" id="live" hidden><div id="lt"></div><div id="map2" hidden></div></div>';
     const dr=d.driver,fin=['Delivered','Cancelled'].includes(d.status);if(fin)clearInterval(pollT);
-    $('#sum').innerHTML=`<b>${esc(d.tracking)}</b> <span class="pill ${esc(d.status)}">${esc(d.status)}</span><div class="mute">${esc(d.a)} to ${esc(d.b)}, ${esc(d.parcel||'Parcel')}, ${d.service}</div>${!dr&&!fin?'<div class="mute">A delivery partner will be assigned soon.</div>':''}
+    $('#sum').innerHTML=`<b>${esc(d.tracking)}</b> <span class="pill ${esc(d.status)}">${esc(d.status)}</span><div class="mute">${esc(d.a)} to ${esc(d.b)}, ${esc(d.parcel||'Parcel')}, ${d.service}</div>${d.otp?`<div class="mute">Delivery OTP: <b>${esc(d.otp)}</b>. Share it with the receiver.</div>`:''}${!dr&&!fin?'<div class="mute">A delivery partner will be assigned soon.</div>':''}
      <ol class="tl">${d.events.slice().reverse().map(e=>`<li><b>${esc(e.status)}</b><span class="mute">${fmt(e.at)}</span></li>`).join('')}</ol>`;
     $('#live').hidden=!dr;if(!dr)return;
     const ago=dr.updated?Math.max(0,Math.round((Date.now()-new Date(dr.updated.replace(' ','T')+'Z'))/1000)):0;
@@ -213,7 +218,7 @@ function driverView(){show(`<div class="wrap"><h2>Delivery partner panel</h2><di
       <div class="grid" style="margin-top:10px"><div><div class="mute">Pickup</div>${esc(r.s_name)} <a href="tel:${esc(r.s_phone)}">${esc(r.s_phone)}</a><br>${esc(r.s_addr)}<br><a target="_blank" rel="noopener" href="${gmap(r,'s')}">Navigate</a></div>
       <div><div class="mute">Delivery</div>${esc(r.r_name)} <a href="tel:${esc(r.r_phone)}">${esc(r.r_phone)}</a><br>${esc(r.r_addr)}<br><a target="_blank" rel="noopener" href="${gmap(r,'r')}">Navigate</a></div></div>
       <div class="row" style="margin-top:12px">${(next[r.status]||[]).map(s=>`<button data-o="${r.id}" data-s="${s}">Mark ${s}</button>`).join('')}</div></div>`).join(''):'<div class="card">No active deliveries assigned to you right now.</div>';
-    $$('[data-s]').forEach(b=>b.onclick=run(async()=>{await api('driver/orders/'+b.dataset.o,'PUT',{status:b.dataset.s});toast('Updated');load()}))});
+    $$('[data-s]').forEach(b=>b.onclick=run(async()=>{const body={status:b.dataset.s};if(body.status==='Delivered'){body.otp=prompt('Ask the receiver for the 4-digit delivery OTP and enter it here');if(!body.otp)return}await api('driver/orders/'+b.dataset.o,'PUT',body);toast('Updated');load()}))});
   load();pollT=setInterval(load,20000)}
 
 /* admin */
@@ -261,7 +266,7 @@ function invoiceView(id){show('<div class="wrap"><div class="inv card" id="iv">L
     $('#iv').innerHTML=`<div class="row" style="align-items:start"><div><h1>${esc(s.company)}</h1><div class="mute">${esc(s.companyAddress)}<br>${esc(s.companyPhone)}</div></div><div style="text-align:right"><h2 style="margin:0">INVOICE</h2><b>INV-${String(o.id).padStart(5,'0')}</b><div class="mute">${fmt(o.created)}<br>Tracking ${esc(o.tracking)}</div></div></div>
     <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
     <div class="grid"><div><div class="mute">Billed to</div><b>${esc(o.customer)}</b><br>${esc(o.email)}</div><div><div class="mute">Pickup</div>${esc(o.s_name)} ${esc(o.s_phone)}<br>${esc(o.s_addr)}</div><div><div class="mute">Delivery</div>${esc(o.r_name)} ${esc(o.r_phone)}<br>${esc(o.r_addr)}</div></div>
-    <table style="margin-top:18px"><tr><th>Description</th><th class="r">Amount</th></tr><tr><td>${esc(o.service)} courier, ${esc(o.a)} to ${esc(o.b)}<div class="mute">${esc(o.parcel||'Parcel')}, ${o.kg} kg</div></td><td class="r">${m(ship)}</td></tr>${o.insurance?`<tr><td>Insurance (declared value ${m(o.value)})</td><td class="r">${m(o.insurance)}</td></tr>`:''}<tr class="tot"><td>Total</td><td class="r">${m(o.price)}</td></tr></table>
+    <table style="margin-top:18px"><tr><th>Description</th><th class="r">Amount</th></tr><tr><td>${esc(o.service)} courier, ${esc(o.a)} to ${esc(o.b)}<div class="mute">${esc(o.parcel||'Parcel')}, ${o.kg} kg${o.km?', '+o.km+' km':''}</div></td><td class="r">${m(ship)}</td></tr>${o.insurance?`<tr><td>Insurance (declared value ${m(o.value)})</td><td class="r">${m(o.insurance)}</td></tr>`:''}<tr class="tot"><td>Total</td><td class="r">${m(o.price)}</td></tr></table>
     <p><b>Payment:</b> cash on delivery. ${o.status==='Cancelled'?'This order was cancelled, nothing is due.':'Please pay '+m(o.price)+' in cash to the courier when the parcel is delivered.'}</p>
     <div class="row noprint"><button id="pr" style="flex:0 0 auto">Print / save as PDF</button><button class="ghost" id="bk2" style="flex:0 0 auto">Back</button></div>`;
     $('#pr').onclick=()=>print();$('#bk2').onclick=()=>history.back()})()}
